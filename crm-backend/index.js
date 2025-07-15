@@ -24,9 +24,9 @@ const customerRoutes = require('./routes/customers');
 const analyticsRoutes = require('./routes/analytics');
 const leadRoutes = require('./routes/leads');
 
-app.use('/api/customers', customerRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/leads', leadRoutes);
+app.use('/api/v1/customers', customerRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/leads', leadRoutes);
 
 app.get('/', (req, res) => {
   res.send('🚀 CRM Backend Running');
