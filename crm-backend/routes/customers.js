@@ -1,12 +1,10 @@
 /**
- * Customers Routes
- * 
- * This file defines all the API endpoints related to customers in the CRM system.
+ * @fileoverview Customers Routes
+ * @description This file defines all the API endpoints related to customers in the CRM system.
  * It handles routing for CRUD operations on customers.
- * The actual business logic is implemented in the customerController.
+ * @version 1.0.0
  */
 
-// Import required modules
 const express = require('express');
 const router = express.Router();
 const customerController = require('../controllers/customerController');

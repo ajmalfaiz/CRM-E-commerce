@@ -1,12 +1,10 @@
 /**
- * Leads Routes
- * 
- * This file defines all the API endpoints related to leads in the CRM system.
+ * @fileoverview Leads Routes
+ * @description This file defines all the API endpoints related to leads in the CRM system.
  * It handles routing for CRUD operations on leads.
- * The actual business logic is implemented in the leadController.
+ * @version 1.0.0
  */
 
-// Import required modules
 const express = require('express');
 const router = express.Router();
 const leadController = require('../controllers/leadController');

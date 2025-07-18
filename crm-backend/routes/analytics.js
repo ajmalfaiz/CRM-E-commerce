@@ -1,11 +1,10 @@
 /**
- * Analytics Routes
- * 
- * This file defines all the API endpoints related to analytics in the CRM system.
+ * @fileoverview Analytics Routes
+ * @description This file defines all the API endpoints related to analytics in the CRM system.
  * It provides insights and statistics about different aspects of the business.
+ * @version 1.0.0
  */
 
-// Import required modules
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('../controllers/analyticsController');
@@ -66,4 +65,21 @@ router.get('/leads/performance', analyticsController.getLeadsAnalytics);
 router.get('/customers/insights', analyticsController.getCustomersAnalytics);
 
 // Export the router to be used in the main application
+/**
+ * @route   GET /api/v1/analytics/ecommerce/slides
+ * @desc    Get e-commerce slides data including featured products, top categories, and sales metrics
+ * @access  Public
+ * @returns {Object} {
+ *   featuredProducts: Array<{_id: string, name: string, price: number, imageUrl: string, rating: number}>,
+ *   topCategories: Array<{_id: string, count: number}>,
+ *   salesTrends: Array<{_id: string, totalSales: number, orderCount: number}>,
+ *   metrics: {
+ *     totalRevenue: number,
+ *     totalOrders: number,
+ *     averageOrderValue: number
+ *   }
+ * }
+ */
+router.get('/ecommerce/slides', analyticsController.getEcommerceSlides);
+
 module.exports = router;

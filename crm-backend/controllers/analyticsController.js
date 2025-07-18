@@ -8,6 +8,8 @@
 // Import required models
 const Lead = require('../models/Lead');
 const Customer = require('../models/Customer');
+const Order = require('../models/Order');
+const Product = require('../models/Product');
 
 /**
  * @desc    Get dashboard summary with key metrics
@@ -170,5 +172,78 @@ exports.getCustomersAnalytics = async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
+  }
+};
+
+/**
+ * @desc    Get e-commerce slides data
+ * @route   GET /api/v1/analytics/ecommerce/slides
+ * @access  Public
+ * @param   {Object} req - Express request object
+ * @param   {Object} res - Express response object
+ * @returns {Object} E-commerce slides data including featured products and sales metrics
+ */
+exports.getEcommerceSlides = async (req, res) => {
+  try {
+    // Get featured products (example implementation)
+    const featuredProducts = await Product.find({ isFeatured: true })
+      .select('name price imageUrl rating')
+      .limit(5)
+      .lean();
+
+    // Get top categories (example implementation)
+    const topCategories = await Product.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // Get sales trends (example implementation - last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const salesTrends = await Order.aggregate([
+      { $match: { createdAt: { $gte: sixMonthsAgo } } },
+      { 
+        $group: {
+          _id: { 
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          totalSales: { $sum: '$totalAmount' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Calculate metrics
+    const totalRevenue = salesTrends.reduce((sum, item) => sum + (item.totalSales || 0), 0);
+    const totalOrders = salesTrends.reduce((sum, item) => sum + (item.orderCount || 0), 0);
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    res.json({
+      success: true,
+      data: {
+        featuredProducts,
+        topCategories,
+        salesTrends: salesTrends.map(item => ({
+          _id: `${item._id.year}-${String(item._id.month).padStart(2, '0')}`,
+          totalSales: item.totalSales,
+          orderCount: item.orderCount
+        })),
+        metrics: {
+          totalRevenue,
+          totalOrders,
+          averageOrderValue
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in getEcommerceSlides:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch e-commerce slides data'
+    });
   }
 };
