@@ -12,3 +12,15 @@ export const fetchAnalytics = async () => {
     throw error;
   }
 };
+
+// Simple JWT decode (no validation, just base64 decode for beginner use)
+export function decodeToken(token) {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded;
+  } catch (e) {
+    return null;
+  }
+}

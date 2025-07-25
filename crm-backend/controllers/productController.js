@@ -1,126 +1,77 @@
 const Product = require('../models/Product');
+const multer = require('multer');
+const path = require('path');
 
-// Get all products
-exports.getProducts = async (req, res) => {
-    try {
-        const products = await Product.find();
-        res.status(200).json({
-            success: true,
-            count: products.length,
-            data: products
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: 'Server Error'
-        });
+// Set up multer storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads/'));
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ storage });
+
+async function getAllProducts(req, res) {
+  try {
+    const products = await Product.find({ user: req.user.id });
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function createProduct(req, res) {
+  try {
+    let imagePath = req.body.image; // Default to URL
+    if (req.file) {
+      imagePath = `/uploads/${req.file.filename}`;
     }
-};
+    const newProduct = await Product.create({
+      ...req.body,
+      image: imagePath,
+      user: req.user.id
+    });
+    res.status(201).json(newProduct);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
 
-// Get single product
-exports.getProduct = async (req, res) => {
-    try {
-        const product = await Product.findById(req.params.id);
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                error: 'Product not found'
-            });
-        }
-        res.status(200).json({
-            success: true,
-            data: product
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: 'Server Error'
-        });
+async function updateProduct(req, res) {
+  try {
+    const updated = await Product.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id },
+      req.body,
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(404).json({ error: 'Product not found' });
     }
-};
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
 
-// Create product
-exports.createProduct = async (req, res) => {
-    try {
-        const productData = {
-            ...req.body,
-            image: req.file ? `/uploads/${req.file.filename}` : null
-        };
-
-        const product = await Product.create(productData);
-        res.status(201).json({
-            success: true,
-            data: product
-        });
-    } catch (error) {
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(val => val.message);
-            return res.status(400).json({
-                success: false,
-                error: messages
-            });
-        }
-        res.status(500).json({
-            success: false,
-            error: 'Server Error'
-        });
+async function deleteProduct(req, res) {
+  try {
+    const deleted = await Product.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    if (!deleted) {
+      return res.status(404).json({ error: 'Product not found' });
     }
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = {
+  getAllProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  upload // Export multer upload for use in routes
 };
-
-// Update product
-exports.updateProduct = async (req, res) => {
-    try {
-        const updateData = {
-            ...req.body
-        };
-
-        if (req.file) {
-            updateData.image = `/uploads/${req.file.filename}`;
-        }
-
-        const product = await Product.findByIdAndUpdate(req.params.id, updateData, {
-            new: true,
-            runValidators: true
-        });
-
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                error: 'Product not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: product
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: 'Server Error'
-        });
-    }
-};
-
-// Delete product
-exports.deleteProduct = async (req, res) => {
-    try {
-        const product = await Product.findByIdAndDelete(req.params.id);
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                error: 'Product not found'
-            });
-        }
-        res.status(200).json({
-            success: true,
-            data: {}
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: 'Server Error'
-        });
-    }
-};
-

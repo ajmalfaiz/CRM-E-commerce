@@ -1,74 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  PlusIcon, 
-  MagnifyingGlassIcon, 
-  FunnelIcon, 
-  TagIcon,
-  CreditCardIcon,
-  DocumentTextIcon,
-  PhotoIcon,
-  LinkIcon,
-  TrashIcon,
-  PencilIcon,
-  XMarkIcon,
-  CheckIcon,
-  ArrowPathIcon,
-  StarIcon
+import {
+    ArrowPathIcon,
+    MagnifyingGlassIcon,
+    PencilIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
+import axios from 'axios';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import AutoInvoiceSettings from './AutoInvoiceSettings';
+import OrderList from './OrderList';
+import PaymentGatewaySetup from './PaymentGatewaySetup';
+import ProductForm from './ProductForm';
 
-// Sample product data
-const sampleProducts = [
-  {
-    id: 1,
-    title: 'Wireless Earbuds Pro',
-    price: 129.99,
-    description: 'High-quality wireless earbuds with noise cancellation and 24-hour battery life.',
-    category: 'electronics',
-    stock: 45,
-    featured: true,
-    image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    createdAt: '2023-06-15T10:30:00Z'
-  },
-  {
-    id: 2,
-    title: 'Premium Cotton T-Shirt',
-    price: 29.99,
-    description: 'Comfortable cotton t-shirt available in multiple colors and sizes.',
-    category: 'clothing',
-    stock: 120,
-    featured: false,
-    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    createdAt: '2023-06-20T14:15:00Z'
-  },
-  {
-    id: 3,
-    title: 'Stainless Steel Water Bottle',
-    price: 24.95,
-    description: 'Keep your drinks hot or cold for hours with this durable stainless steel water bottle.',
-    category: 'home',
-    stock: 0,
-    featured: true,
-    image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    createdAt: '2023-06-10T09:45:00Z'
-  },
-  {
-    id: 4,
-    title: 'Wireless Charging Pad',
-    price: 39.99,
-    description: 'Fast wireless charging pad compatible with all Qi-enabled devices.',
-    category: 'electronics',
-    stock: 32,
-    featured: false,
-    image: 'https://images.unsplash.com/photo-1587033411394-98a59a93e5a8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-    createdAt: '2023-06-18T16:20:00Z'
-  }
-];
+
+// Cart Context
+const CartContext = createContext();
+export const useCart = () => useContext(CartContext);
+
+const CartProvider = ({ children }) => {
+  const [cart, setCart] = useState([]);
+  const addToCart = (product) => {
+    setCart((prev) => {
+      if (prev.find((item) => item._id === product._id)) return prev;
+      return [...prev, { ...product, quantity: 1 }];
+    });
+  };
+  const removeFromCart = (id) => setCart((prev) => prev.filter((item) => item._id !== id));
+  const clearCart = () => setCart([]);
+  return (
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
+      {children}
+    </CartContext.Provider>
+  );
+};
+
+// Cart Drawer/Modal
+const CartDrawer = ({ open, onClose, onPlaceOrder }) => {
+  const { cart, removeFromCart, clearCart } = useCart();
+  const total = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+  return open ? (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-30">
+      <div className="bg-white w-full max-w-md h-full shadow-lg p-6 flex flex-col">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Cart</h2>
+          <button onClick={onClose} className="text-gray-500">Close</button>
+        </div>
+        {cart.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center text-gray-500">Cart is empty</div>
+        ) : (
+          <>
+            <ul className="flex-1 overflow-y-auto mb-4">
+              {cart.map((item) => (
+                <li key={item._id} className="flex justify-between items-center border-b py-2">
+                  <span>{item.title}</span>
+                  <span>${(parseFloat(item.price) || 0).toFixed(2)}</span>
+                  <button onClick={() => removeFromCart(item._id)} className="text-red-500 ml-2">Remove</button>
+                </li>
+              ))}
+            </ul>
+            <div className="mb-4 font-bold">Total: ${total.toFixed(2)}</div>
+            <button onClick={onPlaceOrder} className="w-full bg-green-600 text-white py-2 rounded">Place Order</button>
+            <button onClick={clearCart} className="w-full mt-2 bg-gray-300 text-gray-700 py-2 rounded">Clear Cart</button>
+          </>
+        )}
+      </div>
+    </div>
+  ) : null;
+};
 
 // Product List Component
-const ProductList = ({ products, onEdit, onDelete }) => {
+const API_BASE_URL = 'http://localhost:5000';
+const ProductList = ({ products, onEdit, onDelete, onView, onReset }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [customerName, setCustomerName] = useState('Test Customer');
+  const [orderType, setOrderType] = useState('Online');
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const { addToCart } = useCart();
+  const [cartOpen, setCartOpen] = useState(false);
   
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,8 +97,41 @@ const ProductList = ({ products, onEdit, onDelete }) => {
     return a.title.localeCompare(b.title);
   });
 
+  const handlePlaceOrderClick = (product) => {
+    setSelectedProduct(product);
+    setModalOpen(true);
+  };
+
+  const handleOrderSubmit = async (e) => {
+    e.preventDefault();
+    setPlacingOrder(true);
+    try {
+      const orderId = Math.floor(10000 + Math.random() * 90000).toString();
+      const payload = {
+        orderId,
+        productTitle: selectedProduct.title,
+        price: selectedProduct.price,
+        customer: customerName,
+        date: new Date(),
+        type: orderType,
+        status: 'Shipped',
+      };
+      await axios.post('/api/orders', payload);
+      alert(`Order placed for ${selectedProduct.title}`);
+      setModalOpen(false);
+      setSelectedProduct(null);
+      setCustomerName('Test Customer');
+      setOrderType('Online');
+    } catch (err) {
+      alert('Failed to place order');
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      <button onClick={() => setCartOpen(true)} className="mb-2 px-4 py-2 bg-blue-600 text-white rounded">View Cart</button>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -129,6 +174,7 @@ const ProductList = ({ products, onEdit, onDelete }) => {
               setSearchTerm('');
               setCategoryFilter('all');
               setSortBy('featured');
+              if (onReset) onReset();
             }}
           >
             <ArrowPathIcon className="h-4 w-4 mr-2" />
@@ -138,57 +184,281 @@ const ProductList = ({ products, onEdit, onDelete }) => {
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {filteredProducts.map((product) => (
-            <li key={product.id} className="p-4 hover:bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 h-16 w-16 rounded-md overflow-hidden">
-                    <img
-                      className="h-full w-full object-cover"
-                      src={product.image || 'https://via.placeholder.com/150'}
-                      alt={product.title}
-                    />
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-sm font-medium text-gray-900">
-                      {product.title}
-                      {product.featured && (
-                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          <StarIcon className="h-3 w-3 mr-1" />
-                          Featured
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-sm text-gray-500">{product.category}</p>
-                    <p className="text-sm font-medium text-gray-900">${product.price.toFixed(2)}</p>
-                    <div className="mt-1">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.stock > 0 ? `In Stock (${product.stock})` : 'Out of Stock'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => onEdit(product)}
-                    className="p-1.5 text-gray-400 hover:text-indigo-600 focus:outline-none"
-                  >
-                    <PencilIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => onDelete(product.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 focus:outline-none"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                  </button>
-                </div>
+        <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Featured</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredProducts.map((product) => (
+                  <tr key={product._id} className="hover:bg-gray-50 cursor-pointer" onClick={() => onView(product)}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <img
+                        className="h-10 w-10 rounded-md object-cover"
+                        src={
+                          product.image
+                            ? (product.image.startsWith('/uploads')
+                                ? `${API_BASE_URL}${product.image}`
+                                : product.image)
+                            : 'https://picsum.photos/150'
+                        }
+                        alt={product.title}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{product.title}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{product.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">${(parseFloat(product.price)||0).toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{product.stock}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{product.featured ? 'Yes' : 'No'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
+                      <button onClick={e => { e.stopPropagation(); onEdit(product); }} className="p-1.5 text-gray-400 hover:text-indigo-600 focus:outline-none">
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); onDelete(product._id); }} className="p-1.5 text-gray-400 hover:text-red-600 focus:outline-none">
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); addToCart(product); }} className="p-1.5 text-gray-400 hover:text-blue-600 focus:outline-none">Add to Cart</button>
+                      <button onClick={e => { e.stopPropagation(); handlePlaceOrderClick(product); }} className="p-1.5 text-gray-400 hover:text-green-600 focus:outline-none">
+                        Place Order
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+      </div>
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onPlaceOrder={async () => {
+        if (!window.confirm('Place order for all items in cart?')) return;
+        try {
+          const payload = {
+            products: useCart().cart.map(item => ({ product: item._id, quantity: 1 })),
+            total: useCart().cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0),
+          };
+          await axios.post('/api/orders', payload);
+          alert('Order placed for all cart items!');
+          useCart().clearCart();
+          setCartOpen(false);
+        } catch (err) {
+          alert('Failed to place cart order');
+        }
+      }} />
+      {/* Modal for placing order */}
+      {modalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-lg font-bold mb-4">Place Order for {selectedProduct?.title}</h2>
+            <form onSubmit={handleOrderSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Customer Name</label>
+                <input type="text" className="w-full border rounded px-3 py-2" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
               </div>
-            </li>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">Order Type</label>
+                <select className="w-full border rounded px-3 py-2" value={orderType} onChange={e => setOrderType(e.target.value)}>
+                  <option value="Online">Online</option>
+                  <option value="In-Store">In-Store</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" className="px-4 py-2 bg-gray-300 rounded" onClick={() => setModalOpen(false)} disabled={placingOrder}>Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded" disabled={placingOrder}>{placingOrder ? 'Placing...' : 'Place Order'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Category Management Component (beginner-friendly, local state only)
+const CategoryManagement = ({ categories, setCategories }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [editIndex, setEditIndex] = useState(null);
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    if (!name) return;
+    if (editIndex !== null) {
+      const updated = [...categories];
+      updated[editIndex] = { name, description };
+      setCategories(updated);
+      setEditIndex(null);
+    } else {
+      setCategories([...categories, { name, description }]);
+    }
+    setName('');
+    setDescription('');
+  };
+
+  const handleEdit = (idx) => {
+    setEditIndex(idx);
+    setName(categories[idx].name);
+    setDescription(categories[idx].description);
+  };
+
+  const handleDelete = (idx) => {
+    if (window.confirm('Delete this category?')) {
+      setCategories(categories.filter((_, i) => i !== idx));
+    }
+  };
+
+  return (
+    <div className="bg-white shadow overflow-hidden sm:rounded-lg px-4 py-5 sm:p-6">
+      <h3 className="text-2xl font-bold mb-2">Category Management</h3>
+      <h4 className="text-lg font-semibold mb-2">Add New Category</h4>
+      <form onSubmit={handleSave} className="mb-6">
+        <input
+          className="block w-full border rounded px-3 py-2 mb-2"
+          placeholder="Enter category name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+        />
+        <textarea
+          className="block w-full border rounded px-3 py-2 mb-2"
+          placeholder="Description"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+        />
+        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          {editIndex !== null ? 'Update Category' : 'Save Category'}
+        </button>
+        {editIndex !== null && (
+          <button type="button" className="ml-2 px-4 py-2 bg-gray-400 text-white rounded" onClick={() => { setEditIndex(null); setName(''); setDescription(''); }}>
+            Cancel
+          </button>
+        )}
+      </form>
+      <h4 className="text-lg font-semibold mb-2">Existing Categories</h4>
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {categories.map((cat, idx) => (
+            <tr key={idx}>
+              <td className="px-4 py-2">{cat.name}</td>
+              <td className="px-4 py-2">{cat.description}</td>
+              <td className="px-4 py-2">
+                <button className="text-blue-600 mr-2" onClick={() => handleEdit(idx)}>Edit</button>
+                <button className="text-red-600" onClick={() => handleDelete(idx)}>Delete</button>
+              </td>
+            </tr>
           ))}
-        </ul>
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// E-commerce Dashboard Component
+const EcommerceDashboard = ({ products, onEdit, onDelete, onView, onReset }) => {
+  return (
+    <div>
+      <h2 className="text-3xl font-bold mb-6">E-Commerce Dashboard</h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-start">
+          <div className="text-gray-500 text-sm mb-1">Revenue</div>
+          <div className="text-2xl font-bold">$21,456</div>
+          <div className="text-green-500 text-xs mt-1">+20% from last month</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-start">
+          <div className="text-gray-500 text-sm mb-1">Sales</div>
+          <div className="text-2xl font-bold">12,345</div>
+          <div className="text-red-500 text-xs mt-1">-10% from last month</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-start">
+          <div className="text-gray-500 text-sm mb-1">New Customers</div>
+          <div className="text-2xl font-bold">2,345</div>
+          <div className="text-green-500 text-xs mt-1">+30% from last month</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 flex flex-col items-start">
+          <div className="text-gray-500 text-sm mb-1">Average Order Value</div>
+          <div className="text-2xl font-bold">$53.56</div>
+          <div className="text-red-500 text-xs mt-1">-12% from last month</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-gray-500 text-sm mb-2">Revenue</div>
+          <div className="text-2xl font-bold">$12,500</div>
+          <div className="text-green-500 text-xs mb-2">Last 30 Days +10%</div>
+          <div className="h-24 flex items-end">
+            {/* Placeholder for chart */}
+            <svg width="100%" height="100%" viewBox="0 0 200 60"><polyline fill="none" stroke="#6366f1" strokeWidth="3" points="0,40 20,30 40,35 60,20 80,30 100,10 120,25 140,15 160,30 180,20 200,40" /></svg>
+          </div>
+          <div className="flex justify-between text-xs text-gray-400 mt-2">
+            <span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-gray-500 text-sm mb-2">Returning Rate</div>
+          <div className="text-2xl font-bold">15%</div>
+          <div className="text-green-500 text-xs mb-2">Last 30 Days +5%</div>
+          <div className="h-24 flex items-end gap-2">
+            {/* Placeholder for bar chart */}
+            {[40, 45, 50, 45, 40].map((h, i) => (
+              <div key={i} className="bg-indigo-200 w-6" style={{height: `${h}px`}}></div>
+            ))}
+          </div>
+          <div className="flex justify-between text-xs text-gray-400 mt-2">
+            <span>Week 1</span><span>Week 2</span><span>Week 3</span><span>Week 4</span><span>Week 5</span>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-lg font-bold mb-2">Sales by Location</div>
+          <div className="text-xs text-gray-400 mb-2">Income in last 28 days</div>
+          <div className="mb-2">Canada <span className="float-right">80%</span></div>
+          <div className="w-full h-2 bg-gray-200 rounded mb-2"><div className="h-2 bg-blue-500 rounded" style={{width: '80%'}}></div></div>
+          <div className="mb-2">United States <span className="float-right">10%</span></div>
+          <div className="w-full h-2 bg-gray-200 rounded mb-2"><div className="h-2 bg-blue-500 rounded" style={{width: '10%'}}></div></div>
+          <div className="mb-2">United Kingdom <span className="float-right">5%</span></div>
+          <div className="w-full h-2 bg-gray-200 rounded mb-2"><div className="h-2 bg-blue-500 rounded" style={{width: '5%'}}></div></div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-lg font-bold mb-2">Customer Reviews</div>
+          <div className="text-xs text-gray-400 mb-2">Based on 5,500 verified purchases</div>
+          <div className="flex items-center mb-2">
+            <span className="text-3xl font-bold mr-2">4.5</span>
+            <span className="text-yellow-400 text-xl">★</span>
+            <span className="ml-2 text-gray-500">1,234 reviews</span>
+          </div>
+          <div className="space-y-1">
+            {[{star: 5, pct: 40}, {star: 4, pct: 30}, {star: 3, pct: 15}, {star: 2, pct: 10}, {star: 1, pct: 5}].map(r => (
+              <div key={r.star} className="flex items-center text-xs">
+                <span className="w-6">{r.star}</span>
+                <div className="flex-1 mx-2 h-2 bg-gray-200 rounded"><div className="h-2 bg-yellow-400 rounded" style={{width: `${r.pct}%`}}></div></div>
+                <span>{r.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Product List Table (reuse ProductList) */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-bold mb-4">Product List</h3>
+        <ProductList
+          products={products}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onView={onView}
+          onReset={onReset}
+        />
       </div>
     </div>
   );
@@ -196,154 +466,132 @@ const ProductList = ({ products, onEdit, onDelete }) => {
 
 // Main Ecommerce Component
 const Ecommerce = () => {
-  const [activeTab, setActiveTab] = useState('products');
-  const [products, setProducts] = useState(sampleProducts);
+  const location = useLocation();
+  const [products, setProducts] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [categories, setCategories] = useState([
+    { name: 'Electronics', description: 'Electronic gadgets and devices.' },
+    { name: 'Clothing', description: 'Apparel and clothing items.' },
+    { name: 'Home & Garden', description: 'Home appliances and garden tools.' },
+    { name: 'Beauty', description: 'Beauty and personal care products.' },
+  ]);
 
-  const handleAddProduct = () => {
-    setEditingProduct(null);
-    setIsAddingProduct(true);
-  };
+  useEffect(() => {
+    axios.get('/api/products')
+      .then(res => setProducts(res.data))
+      .catch(err => console.error(err));
+  }, []);
 
   const handleEditProduct = (product) => {
     setEditingProduct(product);
-    setIsAddingProduct(false);
+    window.history.pushState({}, '', '/ecommerce/add');
   };
 
-  const handleSaveProduct = (product) => {
+  const handleSaveProduct = (product, isMultipart) => {
     if (editingProduct) {
-      // Update existing product
-      setProducts(products.map(p => p.id === editingProduct.id ? { ...product, id: editingProduct.id } : p));
+      axios.put(`/api/products/${editingProduct._id}`, product)
+        .then(res => {
+          setProducts(products.map(p => p._id === editingProduct._id ? res.data : p));
+          setEditingProduct(null);
+          setSelectedProduct(null);
+          window.history.pushState({}, '', '/ecommerce/products');
+        })
+        .catch(err => console.error(err));
     } else {
-      // Add new product
-      const newProduct = {
-        ...product,
-        id: Math.max(0, ...products.map(p => p.id)) + 1,
-        createdAt: new Date().toISOString()
-      };
-      setProducts([...products, newProduct]);
+      if (isMultipart) {
+        axios.post('/api/products', product, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+          .then(res => {
+            setProducts([...products, res.data]);
+            setEditingProduct(null);
+            setSelectedProduct(null);
+            window.history.pushState({}, '', '/ecommerce/products');
+          })
+          .catch(err => console.error(err));
+      } else {
+        axios.post('/api/products', product)
+          .then(res => {
+            setProducts([...products, res.data]);
+            setEditingProduct(null);
+            setSelectedProduct(null);
+            window.history.pushState({}, '', '/ecommerce/products');
+          })
+          .catch(err => console.error(err));
+      }
     }
-    setEditingProduct(null);
-    setIsAddingProduct(false);
   };
 
   const handleDeleteProduct = (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(products.filter(p => p.id !== id));
+      axios.delete(`/api/products/${id}`)
+        .then(() => {
+          setProducts(products.filter(p => p._id !== id));
+        })
+        .catch(err => console.error(err));
     }
   };
 
+  // Routing logic
+  let content = null;
+  if (location.pathname === '/ecommerce/orders') {
+    content = <OrderList />;
+  } else if (location.pathname === '/ecommerce/dashboard') {
+    content = (
+      <EcommerceDashboard
+        products={products}
+        onEdit={handleEditProduct}
+        onDelete={handleDeleteProduct}
+        onView={setSelectedProduct}
+        onReset={() => setSelectedProduct(null)}
+      />
+    );
+  } else if (location.pathname === '/ecommerce/products') {
+    content = (
+      <ProductList
+        products={products}
+        onEdit={handleEditProduct}
+        onDelete={handleDeleteProduct}
+        onView={setSelectedProduct}
+        onReset={() => setSelectedProduct(null)}
+      />
+    );
+  } else if (location.pathname === '/ecommerce/add') {
+    content = (
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg px-4 py-5 sm:p-6">
+        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Add New Product</h3>
+        <ProductForm onSave={handleSaveProduct} initialData={editingProduct} />
+      </div>
+    );
+  } else if (location.pathname === '/ecommerce/categories') {
+    content = <CategoryManagement categories={categories} setCategories={setCategories} />;
+  } else if (location.pathname === '/ecommerce/payment') {
+    content = <PaymentGatewaySetup />;
+  } else if (location.pathname === '/ecommerce/invoice') {
+    content = <AutoInvoiceSettings />;
+  } else {
+    // Default: show product list
+    content = (
+      <ProductList
+        products={products}
+        onEdit={handleEditProduct}
+        onDelete={handleDeleteProduct}
+        onView={setSelectedProduct}
+        onReset={() => setSelectedProduct(null)}
+      />
+    );
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">E-commerce Manager</h1>
-        {activeTab === 'products' && !isAddingProduct && (
-          <button
-            onClick={handleAddProduct}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Add Product
-          </button>
-        )}
+    <CartProvider>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">E-commerce Manager</h1>
+        </div>
+        <div className="py-4">{content}</div>
       </div>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('products')}
-            className={`${activeTab === 'products' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Product List
-          </button>
-          <button
-            onClick={() => setActiveTab('add')}
-            className={`${activeTab === 'add' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Add New Product
-          </button>
-          <button
-            onClick={() => setActiveTab('categories')}
-            className={`${activeTab === 'categories' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Category Management
-          </button>
-          <button
-            onClick={() => setActiveTab('payment')}
-            className={`${activeTab === 'payment' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Payment Gateway Setup
-          </button>
-          <button
-            onClick={() => setActiveTab('invoice')}
-            className={`${activeTab === 'invoice' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Auto-invoice Settings
-          </button>
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      <div className="py-4">
-        {activeTab === 'products' && (
-          <ProductList 
-            products={products} 
-            onEdit={handleEditProduct} 
-            onDelete={handleDeleteProduct} 
-          />
-        )}
-        
-        {activeTab === 'add' && (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Add New Product</h3>
-              <p className="mt-1 text-sm text-gray-500">Fill in the details below to add a new product to your store.</p>
-            </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <p className="text-gray-500">Product form will be implemented in the next step.</p>
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'categories' && (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Category Management</h3>
-              <p className="mt-1 text-sm text-gray-500">Manage your product categories and subcategories.</p>
-            </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <p className="text-gray-500">Category management will be implemented in the next step.</p>
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'payment' && (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Payment Gateway Setup</h3>
-              <p className="mt-1 text-sm text-gray-500">Configure your payment gateways and settings.</p>
-            </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <p className="text-gray-500">Payment gateway setup will be implemented in the next step.</p>
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'invoice' && (
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Auto-invoice Settings</h3>
-              <p className="mt-1 text-sm text-gray-500">Configure automatic invoice generation and settings.</p>
-            </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <p className="text-gray-500">Auto-invoice settings will be implemented in the next step.</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    </CartProvider>
   );
 };
 

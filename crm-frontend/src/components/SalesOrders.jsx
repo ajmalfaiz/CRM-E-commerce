@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
 import {
-  ArrowLeftIcon,
-  ArrowPathIcon,
-  PrinterIcon,
-  EnvelopeIcon,
-  ArrowDownTrayIcon,
-  PencilIcon,
-  TrashIcon,
-  PlusIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CheckCircleIcon,
-  TruckIcon,
-  CurrencyDollarIcon,
-  DocumentTextIcon,
-  ShieldCheckIcon,
-  ChatBubbleLeftRightIcon
+    ArrowDownIcon,
+    ArrowLeftIcon,
+    ArrowPathIcon,
+    ArrowUpIcon,
+    ChatBubbleLeftRightIcon,
+    CheckCircleIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    CurrencyDollarIcon,
+    DocumentTextIcon,
+    EnvelopeIcon,
+    FunnelIcon,
+    MagnifyingGlassIcon,
+    PencilIcon,
+    PlusIcon,
+    PrinterIcon,
+    ShieldCheckIcon,
+    TrashIcon,
+    TruckIcon
 } from '@heroicons/react/24/outline';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
@@ -775,8 +775,29 @@ const OrdersList = ({ orders, onViewOrder }) => {
 // Main component
 const SalesOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [orders, setOrders] = useState(initialOrders);
-  const [viewMode, setViewMode] = useState('kanban'); // 'kanban' or 'list'
+  const [orders, setOrders] = useState([]);
+  const [viewMode, setViewMode] = useState('list'); // default to table view
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('/api/orders', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setOrders(res.data);
+      } catch (err) {
+        setError('Failed to fetch orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
@@ -786,13 +807,34 @@ const SalesOrders = () => {
     setSelectedOrder(null);
   };
 
-  const handleStatusChange = (orderId, newStatus) => {
-    setOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
-  };
+  if (loading) return <div className="p-6">Loading orders...</div>;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
+  if (!orders.length) return <div className="p-6">No orders found.</div>;
+
+  // Map backend orders to table format
+  const mappedOrders = orders.map(order => {
+    if (order.products && order.products.length > 0) {
+      // Cart order
+      return {
+        id: order._id,
+        user: order.user?.email || 'N/A',
+        products: order.products.map(p => p.product?.name || 'N/A').join(', '),
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt,
+      };
+    } else {
+      // Direct product order
+      return {
+        id: order._id,
+        user: order.customer || 'N/A',
+        products: order.productTitle || 'N/A',
+        total: order.price || 0,
+        status: order.status || 'N/A',
+        createdAt: order.date || order.createdAt,
+      };
+    }
+  });
 
   return (
     <DndProvider backend={HTML5Backend}>
