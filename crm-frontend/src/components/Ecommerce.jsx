@@ -5,68 +5,12 @@ import {
     TrashIcon
 } from '@heroicons/react/24/outline';
 import axios from 'axios';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AutoInvoiceSettings from './AutoInvoiceSettings';
 import OrderList from './OrderList';
 import PaymentGatewaySetup from './PaymentGatewaySetup';
 import ProductForm from './ProductForm';
-
-
-// Cart Context
-const CartContext = createContext();
-export const useCart = () => useContext(CartContext);
-
-const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
-  const addToCart = (product) => {
-    setCart((prev) => {
-      if (prev.find((item) => item._id === product._id)) return prev;
-      return [...prev, { ...product, quantity: 1 }];
-    });
-  };
-  const removeFromCart = (id) => setCart((prev) => prev.filter((item) => item._id !== id));
-  const clearCart = () => setCart([]);
-  return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
-      {children}
-    </CartContext.Provider>
-  );
-};
-
-// Cart Drawer/Modal
-const CartDrawer = ({ open, onClose, onPlaceOrder }) => {
-  const { cart, removeFromCart, clearCart } = useCart();
-  const total = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
-  return open ? (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-30">
-      <div className="bg-white w-full max-w-md h-full shadow-lg p-6 flex flex-col">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Cart</h2>
-          <button onClick={onClose} className="text-gray-500">Close</button>
-        </div>
-        {cart.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-gray-500">Cart is empty</div>
-        ) : (
-          <>
-            <ul className="flex-1 overflow-y-auto mb-4">
-              {cart.map((item) => (
-                <li key={item._id} className="flex justify-between items-center border-b py-2">
-                  <span>{item.title}</span>
-                  <span>${(parseFloat(item.price) || 0).toFixed(2)}</span>
-                  <button onClick={() => removeFromCart(item._id)} className="text-red-500 ml-2">Remove</button>
-                </li>
-              ))}
-            </ul>
-            <div className="mb-4 font-bold">Total: ${total.toFixed(2)}</div>
-            <button onClick={onPlaceOrder} className="w-full bg-green-600 text-white py-2 rounded">Place Order</button>
-            <button onClick={clearCart} className="w-full mt-2 bg-gray-300 text-gray-700 py-2 rounded">Clear Cart</button>
-          </>
-        )}
-      </div>
-    </div>
-  ) : null;
-};
 
 // Product List Component
 const API_BASE_URL = 'http://localhost:3000';
@@ -74,13 +18,6 @@ const ProductList = ({ products, onEdit, onDelete, onView, onReset, categories =
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [customerName, setCustomerName] = useState('Test Customer');
-  const [orderType, setOrderType] = useState('Online');
-  const [placingOrder, setPlacingOrder] = useState(false);
-  const { addToCart } = useCart();
-  const [cartOpen, setCartOpen] = useState(false);
   
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -97,41 +34,10 @@ const ProductList = ({ products, onEdit, onDelete, onView, onReset, categories =
     return a.title.localeCompare(b.title);
   });
 
-  const handlePlaceOrderClick = (product) => {
-    setSelectedProduct(product);
-    setModalOpen(true);
-  };
 
-  const handleOrderSubmit = async (e) => {
-    e.preventDefault();
-    setPlacingOrder(true);
-    try {
-      const orderId = Math.floor(10000 + Math.random() * 90000).toString();
-      const payload = {
-        orderId,
-        productTitle: selectedProduct.title,
-        price: selectedProduct.price,
-        customer: customerName,
-        date: new Date(),
-        type: orderType,
-        status: 'Shipped',
-      };
-      await axios.post('/api/orders', payload);
-      alert(`Order placed for ${selectedProduct.title}`);
-      setModalOpen(false);
-      setSelectedProduct(null);
-      setCustomerName('Test Customer');
-      setOrderType('Online');
-    } catch (err) {
-      alert('Failed to place order');
-    } finally {
-      setPlacingOrder(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
-      <button onClick={() => setCartOpen(true)} className="mb-2 px-4 py-2 bg-blue-600 text-white rounded">View Cart</button>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -227,10 +133,6 @@ const ProductList = ({ products, onEdit, onDelete, onView, onReset, categories =
                       <button onClick={e => { e.stopPropagation(); onDelete(product._id); }} className="p-1.5 text-gray-400 hover:text-red-600 focus:outline-none">
                         <TrashIcon className="h-5 w-5" />
                       </button>
-                      <button onClick={e => { e.stopPropagation(); addToCart(product); }} className="p-1.5 text-gray-400 hover:text-blue-600 focus:outline-none">Add to Cart</button>
-                      <button onClick={e => { e.stopPropagation(); handlePlaceOrderClick(product); }} className="p-1.5 text-gray-400 hover:text-green-600 focus:outline-none">
-                        Place Order
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -238,46 +140,6 @@ const ProductList = ({ products, onEdit, onDelete, onView, onReset, categories =
             </table>
 
       </div>
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onPlaceOrder={async () => {
-        if (!window.confirm('Place order for all items in cart?')) return;
-        try {
-          const payload = {
-            products: useCart().cart.map(item => ({ product: item._id, quantity: 1 })),
-            total: useCart().cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0),
-          };
-          await axios.post('/api/orders', payload);
-          alert('Order placed for all cart items!');
-          useCart().clearCart();
-          setCartOpen(false);
-        } catch (err) {
-          alert('Failed to place cart order');
-        }
-      }} />
-      {/* Modal for placing order */}
-      {modalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold mb-4">Place Order for {selectedProduct?.title}</h2>
-            <form onSubmit={handleOrderSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Customer Name</label>
-                <input type="text" className="w-full border rounded px-3 py-2" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Order Type</label>
-                <select className="w-full border rounded px-3 py-2" value={orderType} onChange={e => setOrderType(e.target.value)}>
-                  <option value="Online">Online</option>
-                  <option value="In-Store">In-Store</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button type="button" className="px-4 py-2 bg-gray-300 rounded" onClick={() => setModalOpen(false)} disabled={placingOrder}>Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded" disabled={placingOrder}>{placingOrder ? 'Placing...' : 'Place Order'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -596,14 +458,12 @@ const Ecommerce = () => {
   }
 
   return (
-    <CartProvider>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">E-commerce Manager</h1>
-        </div>
-        <div className="py-4">{content}</div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">E-commerce Manager</h1>
       </div>
-    </CartProvider>
+      <div className="py-4">{content}</div>
+    </div>
   );
 };
 
