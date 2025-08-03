@@ -16,26 +16,41 @@ const upload = multer({ storage });
 
 async function getAllProducts(req, res) {
   try {
+    console.log('Getting products for user ID:', req.user.id);
     const products = await Product.find({ user: req.user.id });
+    console.log('Found products:', products);
     res.json(products);
   } catch (err) {
+    console.error('Error getting products:', err);
     res.status(500).json({ error: err.message });
   }
 }
 
 async function createProduct(req, res) {
   try {
+    console.log('Creating product with data:', req.body);
+    console.log('File uploaded:', req.file);
+    console.log('User ID:', req.user.id);
+    
     let imagePath = req.body.image; // Default to URL
     if (req.file) {
       imagePath = `/uploads/${req.file.filename}`;
+      console.log('Image path set to:', imagePath);
     }
-    const newProduct = await Product.create({
+    
+    const productData = {
       ...req.body,
       image: imagePath,
       user: req.user.id
-    });
+    };
+    
+    console.log('Final product data:', productData);
+    
+    const newProduct = await Product.create(productData);
+    console.log('Product created successfully:', newProduct);
     res.status(201).json(newProduct);
   } catch (err) {
+    console.error('Error creating product:', err);
     res.status(500).json({ error: err.message });
   }
 }

@@ -69,8 +69,8 @@ const CartDrawer = ({ open, onClose, onPlaceOrder }) => {
 };
 
 // Product List Component
-const API_BASE_URL = 'http://localhost:5000';
-const ProductList = ({ products, onEdit, onDelete, onView, onReset }) => {
+const API_BASE_URL = 'http://localhost:3000';
+const ProductList = ({ products, onEdit, onDelete, onView, onReset, categories = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
@@ -152,10 +152,15 @@ const ProductList = ({ products, onEdit, onDelete, onView, onReset }) => {
             onChange={(e) => setCategoryFilter(e.target.value)}
           >
             <option value="all">All Categories</option>
-            <option value="electronics">Electronics</option>
-            <option value="clothing">Clothing</option>
-            <option value="home">Home & Garden</option>
-            <option value="beauty">Beauty</option>
+            {categories.length > 0 ? (
+              categories.map((cat, index) => (
+                <option key={index} value={cat.name.toLowerCase().replace(/\s+/g, '-')}>
+                  {cat.name}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No categories available</option>
+            )}
           </select>
           <select
             className="block w-full sm:w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
@@ -204,9 +209,7 @@ const ProductList = ({ products, onEdit, onDelete, onView, onReset }) => {
                         className="h-10 w-10 rounded-md object-cover"
                         src={
                           product.image
-                            ? (product.image.startsWith('/uploads')
-                                ? `${API_BASE_URL}${product.image}`
-                                : product.image)
+                            ? product.image
                             : 'https://picsum.photos/150'
                         }
                         alt={product.title}
@@ -478,9 +481,16 @@ const Ecommerce = () => {
   ]);
 
   useEffect(() => {
+    console.log('Fetching products...');
     axios.get('/api/products')
-      .then(res => setProducts(res.data))
-      .catch(err => console.error(err));
+      .then(res => {
+        console.log('Products fetched successfully:', res.data);
+        setProducts(res.data);
+      })
+      .catch(err => {
+        console.error('Error fetching products:', err);
+        console.error('Error response:', err.response?.data);
+      });
   }, []);
 
   const handleEditProduct = (product) => {
@@ -555,13 +565,14 @@ const Ecommerce = () => {
         onDelete={handleDeleteProduct}
         onView={setSelectedProduct}
         onReset={() => setSelectedProduct(null)}
+        categories={categories}
       />
     );
   } else if (location.pathname === '/ecommerce/add') {
     content = (
       <div className="bg-white shadow overflow-hidden sm:rounded-lg px-4 py-5 sm:p-6">
         <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Add New Product</h3>
-        <ProductForm onSave={handleSaveProduct} initialData={editingProduct} />
+        <ProductForm onSave={handleSaveProduct} initialData={editingProduct} categories={categories} />
       </div>
     );
   } else if (location.pathname === '/ecommerce/categories') {
@@ -579,6 +590,7 @@ const Ecommerce = () => {
         onDelete={handleDeleteProduct}
         onView={setSelectedProduct}
         onReset={() => setSelectedProduct(null)}
+        categories={categories}
       />
     );
   }

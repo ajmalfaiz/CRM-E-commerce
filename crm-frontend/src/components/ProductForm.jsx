@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const ProductForm = ({ onSave, initialData }) => {
+const ProductForm = ({ onSave, initialData, categories = [] }) => {
   initialData = initialData || {};
   const [formData, setFormData] = useState({
     title: initialData.title || '',
@@ -14,6 +14,18 @@ const ProductForm = ({ onSave, initialData }) => {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(initialData.image || '');
   const [imageInputType, setImageInputType] = useState('url'); // 'url' or 'upload'
+
+  const handleInputTypeChange = (type) => {
+    setImageInputType(type);
+    if (type === 'url') {
+      // Clear file when switching to URL
+      setImageFile(null);
+    } else {
+      // Clear URL when switching to upload
+      setFormData({ ...formData, image: '' });
+      setImagePreview('');
+    }
+  };
 
   useEffect(() => {
     // Only reset form when editing an existing product
@@ -45,6 +57,7 @@ const ProductForm = ({ onSave, initialData }) => {
     });
     if (name === 'image') {
       setImagePreview(value);
+      // Clear file when URL is entered
       setImageFile(null);
     }
   };
@@ -54,13 +67,22 @@ const ProductForm = ({ onSave, initialData }) => {
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+      // Clear the URL input when file is selected
       setFormData({ ...formData, image: '' });
+    } else {
+      setImageFile(null);
+      setImagePreview('');
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.title || !formData.price) return;
+    
+    console.log('Submitting form with imageInputType:', imageInputType);
+    console.log('Form data:', formData);
+    console.log('Image file:', imageFile);
+    
     if (imageInputType === 'upload' && imageFile) {
       // Use FormData for file upload
       const data = new FormData();
@@ -71,22 +93,33 @@ const ProductForm = ({ onSave, initialData }) => {
       data.append('stock', formData.stock);
       data.append('featured', formData.featured);
       data.append('image', imageFile);
+      console.log('Sending FormData with file upload');
       onSave(data, true); // true = isMultipart
+    } else if (imageInputType === 'url' && formData.image) {
+      // Use regular form data for URL
+      console.log('Sending regular form data with URL');
+      onSave(formData, false);
     } else {
+      // No image provided, still save the product
+      console.log('Sending regular form data without image');
       onSave(formData, false);
     }
-    setFormData({
-      title: '',
-      price: '',
-      description: '',
-      category: '',
-      stock: 0,
-      featured: false,
-      image: '',
-    });
-    setImageFile(null);
-    setImagePreview('');
-    setImageInputType('url');
+    
+    // Only reset form if not editing
+    if (!initialData || !initialData._id) {
+      setFormData({
+        title: '',
+        price: '',
+        description: '',
+        category: '',
+        stock: 0,
+        featured: false,
+        image: '',
+      });
+      setImageFile(null);
+      setImagePreview('');
+      setImageInputType('url');
+    }
   };
 
   return (
@@ -135,11 +168,21 @@ const ProductForm = ({ onSave, initialData }) => {
           className="mt-1 w-full border rounded px-3 py-2"
         >
           <option value="">Select category</option>
-          <option value="electronics">Electronics</option>
-          <option value="clothing">Clothing</option>
-          <option value="home">Home & Garden</option>
-          <option value="beauty">Beauty</option>
+          {categories.length > 0 ? (
+            categories.map((cat, index) => (
+              <option key={index} value={cat.name.toLowerCase().replace(/\s+/g, '-')}>
+                {cat.name}
+              </option>
+            ))
+          ) : (
+            <option value="" disabled>No categories available</option>
+          )}
         </select>
+        {categories.length === 0 && (
+          <p className="text-sm text-gray-500 mt-1">
+            No categories available. Please add categories in the Category Management section first.
+          </p>
+        )}
       </div>
 
       <div>
@@ -172,7 +215,7 @@ const ProductForm = ({ onSave, initialData }) => {
               name="imageInputType"
               value="url"
               checked={imageInputType === 'url'}
-              onChange={() => setImageInputType('url')}
+              onChange={() => handleInputTypeChange('url')}
             />{' '}
             URL
           </label>
@@ -182,7 +225,7 @@ const ProductForm = ({ onSave, initialData }) => {
               name="imageInputType"
               value="upload"
               checked={imageInputType === 'upload'}
-              onChange={() => setImageInputType('upload')}
+              onChange={() => handleInputTypeChange('upload')}
             />{' '}
             Upload
           </label>
