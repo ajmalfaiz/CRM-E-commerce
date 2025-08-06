@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FunnelIcon, 
-  UserGroupIcon, 
-  CurrencyDollarIcon, 
-  ArrowTrendingUpIcon,
-  MagnifyingGlassIcon,
-  AdjustmentsHorizontalIcon,
-  EllipsisVerticalIcon,
-  PlusIcon,
-  ArrowDownTrayIcon,
-  PhoneIcon,
-  ChatBubbleLeftRightIcon,
-  DocumentTextIcon,
-  ChevronDownIcon,
-  ChevronUpIcon
+import axios from 'axios';
+import {
+    AdjustmentsHorizontalIcon,
+    ArrowDownTrayIcon,
+    ArrowTrendingUpIcon,
+    ChevronDownIcon,
+    ChevronUpIcon,
+    CurrencyDollarIcon,
+    EllipsisVerticalIcon,
+    FunnelIcon,
+    MagnifyingGlassIcon,
+    PhoneIcon,
+    PlusIcon,
+    UserGroupIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
+import React, { useEffect, useState } from 'react';
 
 const Leads = () => {
   const [leads, setLeads] = useState([]);
@@ -28,6 +28,13 @@ const Leads = () => {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragItem, setDragItem] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newLead, setNewLead] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    notes: ''
+  });
 
   // State for expanded columns
   const [expandedColumns, setExpandedColumns] = useState({
@@ -68,52 +75,13 @@ const Leads = () => {
     { id: 'ticket', title: '🧾 Ticket', status: 'Ticket', color: 'bg-purple-50' },
   ];
 
-  // Mock data - replace with actual API call
+  // Fetch leads from API
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        // Replace with actual API call
-        // const response = await fetch('/api/leads');
-        // const data = await response.json();
-        
-        // Mock data
-        const mockLeads = [
-          {
-            _id: '1',
-            name: 'John Doe',
-            company: 'Acme Inc',
-            email: 'john@example.com',
-            phone: '(555) 123-4567',
-            status: 'Untouched',
-            priority: 'HPL',
-            called: false,
-            leadSource: 'Meta',
-            value: 2500,
-            aiSummary: 'Interested in enterprise plan. Requested demo.',
-            whatsapp: '+15551234567',
-            invoiceNumber: 'INV-001',
-            createdAt: new Date()
-          },
-          {
-            _id: '2',
-            name: 'Jane Smith',
-            company: 'Globex Corp',
-            email: 'jane@example.com',
-            phone: '(555) 987-6543',
-            status: 'HPL',
-            priority: 'HPL',
-            called: true,
-            leadSource: 'Inbound',
-            value: 5000,
-            aiSummary: 'Looking for bulk pricing. High intent.',
-            whatsapp: '+15559876543',
-            invoiceNumber: 'INV-002',
-            createdAt: new Date()
-          },
-          // Add more mock leads as needed
-        ];
-        
-        setLeads(mockLeads);
+        const response = await axios.get('/api/customers');
+        console.log('Fetched leads:', response.data);
+        setLeads(response.data);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching leads:', error);
@@ -166,13 +134,7 @@ const Leads = () => {
         ));
 
         // Call API to update the lead status
-        // await fetch(`/api/leads/${dragItem._id}`, {
-        //   method: 'PUT',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //   },
-        //   body: JSON.stringify({ status }),
-        // });
+        await axios.put(`/api/customers/${dragItem._id}`, { status });
       } catch (error) {
         console.error('Error updating lead status:', error);
         // Revert local state on error
@@ -183,8 +145,31 @@ const Leads = () => {
     setDragItem(null);
   };
 
+  // Handle adding new lead
+  const handleAddLead = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('/api/customers', newLead);
+      console.log('Lead created:', response.data);
+      // Fetch the updated list of leads from the server
+      const updatedLeads = await axios.get('/api/customers');
+      setLeads(updatedLeads.data);
+      setShowAddModal(false);
+      setNewLead({ name: '', email: '', phone: '', notes: '' });
+    } catch (error) {
+      console.error('Error creating lead:', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setNewLead({
+      ...newLead,
+      [e.target.name]: e.target.value
+    });
+  };
+
   const stats = [
-    { name: 'Total Leads', value: '1,234', icon: UserGroupIcon, change: '+12%', changeType: 'increase' },
+    { name: 'Total Leads', value: leads.length.toString(), icon: UserGroupIcon, change: '', changeType: 'increase' },
     { name: 'Conversion Rate', value: '8.2%', icon: FunnelIcon, change: '+1.2%', changeType: 'increase' },
     { name: 'Total Value', value: '$124,500', icon: CurrencyDollarIcon, change: '+8.5%', changeType: 'increase' },
     { name: 'Avg. Deal Size', value: '$2,450', icon: ArrowTrendingUpIcon, change: '-2.1%', changeType: 'decrease' },
@@ -208,7 +193,10 @@ const Leads = () => {
             <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
             Export
           </button>
-          <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700">
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700"
+          >
             <PlusIcon className="h-4 w-4 mr-2" />
             Add Lead
           </button>
@@ -330,28 +318,20 @@ const Leads = () => {
                           <div className="flex justify-between items-start">
                             <div>
                               <h4 className="font-medium">{lead.name}</h4>
-                              <p className="text-sm text-gray-600">{lead.company}</p>
+                              <p className="text-sm text-gray-600">{lead.email}</p>
                               <div className="mt-2 flex items-center text-xs text-gray-500">
                                 <span className="inline-flex items-center">
                                   <PhoneIcon className="h-3 w-3 mr-1" />
                                   {lead.phone}
                                 </span>
-                                <span className="mx-2">•</span>
-                                <span className="inline-flex items-center">
-                                  <ChatBubbleLeftRightIcon className="h-3 w-3 mr-1" />
-                                  <a href={`https://wa.me/${lead.whatsapp}`} className="text-blue-600 hover:underline">
-                                    WhatsApp
-                                  </a>
-                                </span>
                               </div>
-                              {lead.aiSummary && (
+                              {lead.notes && (
                                 <div className="mt-2 p-2 bg-blue-50 text-xs text-gray-700 rounded">
-                                  {lead.aiSummary}
+                                  {lead.notes}
                                 </div>
                               )}
                             </div>
                             <div className="flex flex-col items-end">
-                              <span className="text-xs font-medium text-gray-900">${lead.value.toLocaleString()}</span>
                               <span className="text-xs text-gray-500">{format(new Date(lead.createdAt), 'MMM d')}</span>
                             </div>
                           </div>
@@ -364,6 +344,97 @@ const Leads = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Lead Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Add New Lead</h3>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+              <form onSubmit={handleAddLead}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={newLead.name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter name"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={newLead.email}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter email"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={newLead.phone}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    name="notes"
+                    value={newLead.notes}
+                    onChange={handleInputChange}
+                    rows="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter notes (optional)"
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    Add Lead
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -14,6 +14,7 @@ const app = express();
 const productRoutes = require('./routes/productRoutes');
 const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const customerRoutes = require('./routes/customerRoutes');
 const authenticateToken = require('./middleware/authMiddleware');
 const port = process.env.PORT || 3000;
 
@@ -26,6 +27,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 // Product routes
 app.use('/api/products', authenticateToken, productRoutes);
+// Customer routes
+app.use('/api/customers', authenticateToken, customerRoutes);
 // Order routes
 app.use('/api/orders', authenticateToken, orderRoutes);
 

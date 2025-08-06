@@ -16,8 +16,11 @@ const upload = multer({ storage });
 
 async function getAllProducts(req, res) {
   try {
-    console.log('Getting products for user ID:', req.user.id);
-    const products = await Product.find({ user: req.user.id });
+    console.log('Getting products for user ID:', req.user?.id);
+    // For storefront, return all products; for admin, return user-specific products
+    const products = req.headers['x-storefront'] === 'true' 
+      ? await Product.find({}) 
+      : await Product.find({ user: req.user.id });
     console.log('Found products:', products);
     res.json(products);
   } catch (err) {
@@ -25,6 +28,8 @@ async function getAllProducts(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+
 
 async function createProduct(req, res) {
   try {

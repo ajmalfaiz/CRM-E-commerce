@@ -1,8 +1,11 @@
+import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const HomePage = () => {
   const [user, setUser] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is logged in
@@ -17,6 +20,32 @@ const HomePage = () => {
         localStorage.removeItem('token');
       }
     }
+
+    // Fetch products from backend
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        // Use the same endpoint as crm-frontend but with authentication
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        headers['x-storefront'] = 'true'; // Indicate this is a storefront request
+        
+        const response = await axios.get('/api/products', { headers });
+        console.log('Fetched products:', response.data);
+        console.log('Products count:', response.data.length);
+        console.log('Sample product:', response.data[0]);
+        console.log('Featured products in response:', response.data.filter(p => p.featured === true));
+        console.log('API call successful, setting products...');
+        setProducts(response.data);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
   }, []);
 
   const handleLogout = () => {
@@ -24,93 +53,44 @@ const HomePage = () => {
     setUser(null);
   };
 
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Neem Face Serum",
-      price: "$49.99",
-      image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 2,
-      name: "Stylish Vase",
-      price: "$19.99",
-      image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 3,
-      name: "Summer Dress",
-      price: "$39.99",
-      image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=300&h=300&fit=crop&crop=center"
-    }
-  ];
+  // Process products for different sections
+  const featuredProducts = products.filter(p => p.featured === true).slice(0, 6);
+  const bestSellers = products.slice(0, 8);
+  const newArrivals = products.slice(-8); // Last 8 products as new arrivals
+  
 
-  const bestSellers = [
-    {
-      id: 4,
-      name: "Stylish Vase",
-      price: "$19.99",
-      image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 5,
-      name: "Elegant Mirror",
-      price: "$79.99",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 6,
-      name: "The Enigma Code",
-      price: "$19.99",
-      image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 7,
-      name: "Smart Watch",
-      price: "$149.99",
-      image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop&crop=center"
-    }
-  ];
+  
 
-  const newArrivals = [
-    {
-      id: 8,
-      name: "Cozy Blanket",
-      price: "$29.99",
-      image: "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 9,
-      name: "Wireless Headphones",
-      price: "$79.99",
-      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 10,
-      name: "Summer Dress",
-      price: "$39.99",
-      image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=300&h=300&fit=crop&crop=center"
-    },
-    {
-      id: 11,
-      name: "Smart Watch",
-      price: "$149.99",
-      image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop&crop=center"
-    }
-  ];
+  
+  // Debug logging
+  console.log('All products:', products.length);
+  console.log('Featured products:', featuredProducts.length);
+  console.log('Featured products details:', featuredProducts);
+  console.log('All products featured status:', products.map(p => ({ title: p.title, featured: p.featured, featuredType: typeof p.featured })));
+  console.log('Products state updated, rendering...');
 
   const ProductCard = ({ product }) => (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="aspect-square overflow-hidden">
         <img 
-          src={product.image} 
-          alt={product.name}
+          src={
+            product.image 
+              ? (product.image.startsWith('/uploads') 
+                  ? product.image // Use relative path for uploaded images
+                  : product.image) // Use URL directly for external images
+              : 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center'
+          }
+          alt={product.title || product.name}
           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            console.log('Image failed to load:', product.image);
+            e.target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center';
+          }}
         />
       </div>
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.name}</h3>
-        <p className="text-xl font-bold text-blue-600">{product.price}</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title || product.name}</h3>
+        <p className="text-xl font-bold text-blue-600">${product.price || '0.00'}</p>
         <button className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
           Add to Cart
         </button>
@@ -242,31 +222,88 @@ const HomePage = () => {
         {/* Featured Products */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold text-gray-900 mb-8">Featured Products</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featuredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                  <div className="aspect-square bg-gray-200"></div>
+                  <div className="p-4">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : featuredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {featuredProducts.map(product => (
+                <ProductCard key={product._id || product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No featured products available</p>
+            </div>
+          )}
         </section>
 
         {/* Best Sellers */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold text-gray-900 mb-8">Best Sellers</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {bestSellers.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                  <div className="aspect-square bg-gray-200"></div>
+                  <div className="p-4">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : bestSellers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {bestSellers.map(product => (
+                <ProductCard key={product._id || product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No products available</p>
+            </div>
+          )}
         </section>
 
         {/* New Arrivals */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold text-gray-900 mb-8">New Arrivals</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {newArrivals.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                  <div className="aspect-square bg-gray-200"></div>
+                  <div className="p-4">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-8 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : newArrivals.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {newArrivals.map(product => (
+                <ProductCard key={product._id || product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No new arrivals available</p>
+            </div>
+          )}
         </section>
       </div>
 
