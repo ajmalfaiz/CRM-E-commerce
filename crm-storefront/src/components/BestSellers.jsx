@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 
-const Clothing = () => {
+const BestSellers = () => {
  const [user, setUser] = useState(null);
  const [products, setProducts] = useState([]);
  const [loading, setLoading] = useState(true);
@@ -27,32 +27,15 @@ const Clothing = () => {
    const fetchProducts = async () => {
      try {
        setLoading(true);
-       // Use the same endpoint as crm-frontend but with authentication
        const token = localStorage.getItem('token');
        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-       headers['x-storefront'] = 'true'; // Indicate this is a storefront request
+       headers['x-storefront'] = 'true';
       
        const response = await axios.get('/api/products', { headers });
        console.log('Fetched products:', response.data);
-       console.log('Products count:', response.data.length);
-       console.log('Sample product:', response.data[0]);
-       console.log('Featured products in response:', response.data.filter(p => p.featured === true));
-       console.log('API call successful, setting products...');
       
-       // Set all products first
+       // For best sellers, we'll show all products
        setProducts(response.data);
-      
-       // Log all categories for debugging
-       const categories = [...new Set(response.data.map(p => p.category))];
-       console.log('All categories in response:', categories);
-      
-       // Filter for clothing products (case-insensitive check)
-       const clothingProducts = response.data.filter(
-         product => product.category && product.category.toLowerCase() === 'clothing'
-       );
-      
-       console.log('Filtered clothing products:', clothingProducts);
-       setProducts(clothingProducts);
      } catch (error) {
        console.error('Error fetching products:', error);
        setProducts([]);
@@ -64,15 +47,6 @@ const Clothing = () => {
 
    fetchProducts();
  }, []);
-
-
- // Process products for different sections
- const clothingProducts = products.filter(
-   product => product.category && product.category.toLowerCase() === 'clothing'
- );
- const featuredProducts = clothingProducts.filter(p => p.featured === true).slice(0, 6);
- const bestSellers = clothingProducts.slice(0, 8);
- const newArrivals = clothingProducts.slice(-8);
 
 
  const handleLogout = () => {
@@ -127,9 +101,9 @@ const Clothing = () => {
            <nav className="hidden md:flex space-x-8">
              <Link to="/" className="text-gray-700 hover:text-blue-600">Home</Link>
              <Link to="/electronics" className="text-gray-700 hover:text-blue-600">Electronics</Link>
-             <Link to="/clothing" className="text-blue-600 font-medium">Clothing</Link>
+             <Link to="/clothing" className="text-gray-700 hover:text-blue-600">Clothing</Link>
              <Link to="/new-arrivals" className="text-gray-700 hover:text-blue-600">New Arrivals</Link>
-             <Link to="/best-sellers" className="text-gray-700 hover:text-blue-600">Best Sellers</Link>
+             <Link to="/best-sellers" className="text-blue-600 font-medium">Best Sellers</Link>
            </nav>
 
 
@@ -149,7 +123,7 @@ const Clothing = () => {
              <div className="relative">
                <input
                  type="text"
-                 placeholder="Search for products"
+                 placeholder="Search"
                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                />
                <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,13 +151,13 @@ const Clothing = () => {
              {/* User Profile */}
              <div className="relative group">
                <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600">
-                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                    {user ? (
-                     <span className="text-gray-600 text-sm font-semibold">
+                     <span className="text-white text-sm font-semibold">
                        {user.email.charAt(0).toUpperCase()}
                      </span>
                    ) : (
-                     <svg className="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                     <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                      </svg>
                    )}
@@ -227,63 +201,41 @@ const Clothing = () => {
      {/* Main Banner */}
      <div className="bg-gradient-to-r from-yellow-100 to-orange-100 py-16">
        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-         <h2 className="text-6xl font-bold text-yellow-600 mb-4">Up to 60% off Fashion & beauty</h2>
-         <p className="text-xl text-gray-700 mb-4">TOP BRANDS TRENDS</p>
-         <p className="text-lg text-gray-600 mb-8">Unlimited 5% cashback</p>
-         <button className="bg-yellow-600 text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-yellow-700 transition-colors">
-           Shop Now
-         </button>
+         <h2 className="text-5xl font-bold text-yellow-600 mb-4">Best Sellers</h2>
+         <p className="text-xl text-gray-700 mb-8">Our most popular products</p>
        </div>
      </div>
 
 
      {/* Product Sections */}
      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-       {/* Featured Products */}
-       <section className="mb-16">
-         <h2 className="text-3xl font-bold text-gray-900 mb-8">Featured Products</h2>
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-           {featuredProducts.map((product) => (
-             <ProductCard key={product._id || product.id} product={product} />
-           ))}
-           {featuredProducts.length === 0 && !loading && (
-             <div className="text-center py-12 col-span-full">
-               <p className="text-gray-500">No featured clothing products found.</p>
-             </div>
-           )}
-         </div>
-       </section>
-
-
        {/* Best Sellers */}
        <section className="mb-16">
-         <h2 className="text-3xl font-bold text-gray-900 mb-8">Best Sellers</h2>
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-           {bestSellers.map((product) => (
-             <ProductCard key={product._id || product.id} product={product} />
-           ))}
-           {bestSellers.length === 0 && !loading && (
-             <div className="text-center py-12 col-span-full">
-               <p className="text-gray-500">No best sellers found.</p>
-             </div>
-           )}
-         </div>
-       </section>
-
-
-       {/* New Arrivals */}
-       <section className="mb-16">
-         <h2 className="text-3xl font-bold text-gray-900 mb-8">New Arrivals</h2>
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-           {newArrivals.map(product => (
-             <ProductCard key={product._id || product.id} product={product} />
-           ))}
-           {newArrivals.length === 0 && !loading && (
-             <div className="text-center py-12 col-span-full">
-               <p className="text-gray-500">No new arrivals found.</p>
-             </div>
-           )}
-         </div>
+         <h2 className="text-3xl font-bold text-gray-900 mb-8">Our Best Sellers</h2>
+         {loading ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+               <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                 <div className="aspect-square bg-gray-200"></div>
+                 <div className="p-4">
+                   <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                   <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                   <div className="h-8 bg-gray-200 rounded"></div>
+                 </div>
+               </div>
+             ))}
+           </div>
+         ) : products.length > 0 ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+             {products.map(product => (
+               <ProductCard key={product._id || product.id} product={product} />
+             ))}
+           </div>
+         ) : (
+           <div className="text-center py-8">
+             <p className="text-gray-500">No products available</p>
+           </div>
+         )}
        </section>
      </div>
 
@@ -360,7 +312,7 @@ const Clothing = () => {
              </a>
              <a href="#" className="text-gray-300 hover:text-white">
                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                 <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-11.988C24.007 5.367 18.641.001 12.017.001z"/>
+                 <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.901 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.901-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.65-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.065-.36 2.235-.421C8.35 2.175 8.73 2.16 11.97 2.16h.03zM12 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
                </svg>
              </a>
            </div>
@@ -372,5 +324,7 @@ const Clothing = () => {
 };
 
 
-export default Clothing;
+export default BestSellers;
+
+
 

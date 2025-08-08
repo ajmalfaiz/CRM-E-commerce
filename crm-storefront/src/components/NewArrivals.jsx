@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 
-const Clothing = () => {
+const NewArrivals = () => {
  const [user, setUser] = useState(null);
  const [products, setProducts] = useState([]);
  const [loading, setLoading] = useState(true);
@@ -27,32 +27,20 @@ const Clothing = () => {
    const fetchProducts = async () => {
      try {
        setLoading(true);
-       // Use the same endpoint as crm-frontend but with authentication
        const token = localStorage.getItem('token');
        const headers = token ? { Authorization: `Bearer ${token}` } : {};
        headers['x-storefront'] = 'true'; // Indicate this is a storefront request
       
        const response = await axios.get('/api/products', { headers });
        console.log('Fetched products:', response.data);
-       console.log('Products count:', response.data.length);
-       console.log('Sample product:', response.data[0]);
-       console.log('Featured products in response:', response.data.filter(p => p.featured === true));
-       console.log('API call successful, setting products...');
       
-       // Set all products first
-       setProducts(response.data);
+       // Sort by createdAt in descending order and take first 10
+       const newArrivals = [...response.data]
+         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+         .slice(0, 10);
       
-       // Log all categories for debugging
-       const categories = [...new Set(response.data.map(p => p.category))];
-       console.log('All categories in response:', categories);
-      
-       // Filter for clothing products (case-insensitive check)
-       const clothingProducts = response.data.filter(
-         product => product.category && product.category.toLowerCase() === 'clothing'
-       );
-      
-       console.log('Filtered clothing products:', clothingProducts);
-       setProducts(clothingProducts);
+       console.log('New arrivals:', newArrivals);
+       setProducts(newArrivals);
      } catch (error) {
        console.error('Error fetching products:', error);
        setProducts([]);
@@ -64,15 +52,6 @@ const Clothing = () => {
 
    fetchProducts();
  }, []);
-
-
- // Process products for different sections
- const clothingProducts = products.filter(
-   product => product.category && product.category.toLowerCase() === 'clothing'
- );
- const featuredProducts = clothingProducts.filter(p => p.featured === true).slice(0, 6);
- const bestSellers = clothingProducts.slice(0, 8);
- const newArrivals = clothingProducts.slice(-8);
 
 
  const handleLogout = () => {
@@ -127,8 +106,8 @@ const Clothing = () => {
            <nav className="hidden md:flex space-x-8">
              <Link to="/" className="text-gray-700 hover:text-blue-600">Home</Link>
              <Link to="/electronics" className="text-gray-700 hover:text-blue-600">Electronics</Link>
-             <Link to="/clothing" className="text-blue-600 font-medium">Clothing</Link>
-             <Link to="/new-arrivals" className="text-gray-700 hover:text-blue-600">New Arrivals</Link>
+             <Link to="/clothing" className="text-gray-700 hover:text-blue-600">Clothing</Link>
+             <Link to="/new-arrivals" className="text-blue-600 font-medium">New Arrivals</Link>
              <Link to="/best-sellers" className="text-gray-700 hover:text-blue-600">Best Sellers</Link>
            </nav>
 
@@ -149,7 +128,7 @@ const Clothing = () => {
              <div className="relative">
                <input
                  type="text"
-                 placeholder="Search for products"
+                 placeholder="Search"
                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                />
                <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,13 +156,13 @@ const Clothing = () => {
              {/* User Profile */}
              <div className="relative group">
                <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600">
-                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                    {user ? (
-                     <span className="text-gray-600 text-sm font-semibold">
+                     <span className="text-white text-sm font-semibold">
                        {user.email.charAt(0).toUpperCase()}
                      </span>
                    ) : (
-                     <svg className="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                     <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                      </svg>
                    )}
@@ -225,65 +204,43 @@ const Clothing = () => {
 
 
      {/* Main Banner */}
-     <div className="bg-gradient-to-r from-yellow-100 to-orange-100 py-16">
+     <div className="bg-gradient-to-r from-blue-100 to-indigo-100 py-16">
        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-         <h2 className="text-6xl font-bold text-yellow-600 mb-4">Up to 60% off Fashion & beauty</h2>
-         <p className="text-xl text-gray-700 mb-4">TOP BRANDS TRENDS</p>
-         <p className="text-lg text-gray-600 mb-8">Unlimited 5% cashback</p>
-         <button className="bg-yellow-600 text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-yellow-700 transition-colors">
-           Shop Now
-         </button>
+         <h2 className="text-5xl font-bold text-blue-800 mb-4">New Arrivals</h2>
+         <p className="text-xl text-gray-700 mb-8">Discover our latest products just for you</p>
        </div>
      </div>
 
 
      {/* Product Sections */}
      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-       {/* Featured Products */}
-       <section className="mb-16">
-         <h2 className="text-3xl font-bold text-gray-900 mb-8">Featured Products</h2>
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-           {featuredProducts.map((product) => (
-             <ProductCard key={product._id || product.id} product={product} />
-           ))}
-           {featuredProducts.length === 0 && !loading && (
-             <div className="text-center py-12 col-span-full">
-               <p className="text-gray-500">No featured clothing products found.</p>
-             </div>
-           )}
-         </div>
-       </section>
-
-
-       {/* Best Sellers */}
-       <section className="mb-16">
-         <h2 className="text-3xl font-bold text-gray-900 mb-8">Best Sellers</h2>
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-           {bestSellers.map((product) => (
-             <ProductCard key={product._id || product.id} product={product} />
-           ))}
-           {bestSellers.length === 0 && !loading && (
-             <div className="text-center py-12 col-span-full">
-               <p className="text-gray-500">No best sellers found.</p>
-             </div>
-           )}
-         </div>
-       </section>
-
-
        {/* New Arrivals */}
        <section className="mb-16">
-         <h2 className="text-3xl font-bold text-gray-900 mb-8">New Arrivals</h2>
-         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-           {newArrivals.map(product => (
-             <ProductCard key={product._id || product.id} product={product} />
-           ))}
-           {newArrivals.length === 0 && !loading && (
-             <div className="text-center py-12 col-span-full">
-               <p className="text-gray-500">No new arrivals found.</p>
-             </div>
-           )}
-         </div>
+         <h2 className="text-3xl font-bold text-gray-900 mb-8">Latest Products</h2>
+         {loading ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+             {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+               <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+                 <div className="aspect-square bg-gray-200"></div>
+                 <div className="p-4">
+                   <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                   <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                   <div className="h-8 bg-gray-200 rounded"></div>
+                 </div>
+               </div>
+             ))}
+           </div>
+         ) : products.length > 0 ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+             {products.map(product => (
+               <ProductCard key={product._id || product.id} product={product} />
+             ))}
+           </div>
+         ) : (
+           <div className="text-center py-8">
+             <p className="text-gray-500">No new arrivals available</p>
+           </div>
+         )}
        </section>
      </div>
 
@@ -372,5 +329,7 @@ const Clothing = () => {
 };
 
 
-export default Clothing;
+export default NewArrivals;
+
+
 
