@@ -1,12 +1,16 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import Cart from './Cart';
+import CartPage from '../pages/CartPage';
 
 
 const NewArrivals = () => {
  const [user, setUser] = useState(null);
  const [products, setProducts] = useState([]);
  const [loading, setLoading] = useState(true);
+ const { addToCart } = useCart();
 
 
  useEffect(() => {
@@ -60,147 +64,54 @@ const NewArrivals = () => {
  };
 
 
- const ProductCard = ({ product }) => (
-   <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-     <div className="aspect-square overflow-hidden">
-       <img
-         src={
-           product.image
-             ? (product.image.startsWith('/uploads')
-                 ? product.image // Use relative path for uploaded images
-                 : product.image) // Use URL directly for external images
-             : 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center'
-         }
-         alt={product.title || product.name}
-         className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-         onError={(e) => {
-           console.log('Image failed to load:', product.image);
-           e.target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center';
-         }}
-       />
-     </div>
-     <div className="p-4">
-       <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title || product.name}</h3>
-       <p className="text-xl font-bold text-blue-600">${product.price || '0.00'}</p>
-       <button className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
-         Add to Cart
-       </button>
-     </div>
-   </div>
- );
+
+
+const ProductCard = ({ product }) => {
+  // Ensure product has a proper ID
+  const productWithId = {
+    ...product,
+    id: product.id || `product-${product.title || product.name}-${Math.random().toString(36).substr(2, 9)}`
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+      <div className="aspect-square overflow-hidden">
+        <img
+          src={
+            product.image
+              ? (product.image.startsWith('/uploads')
+                  ? product.image // Use relative path for uploaded images
+                  : product.image) // Use URL directly for external images
+              : 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center'
+          }
+          alt={product.title || product.name}
+          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            console.log('Image failed to load:', product.image);
+            e.target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center';
+          }}
+        />
+      </div>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title || product.name}</h3>
+        <p className="text-xl font-bold text-blue-600">${product.price || '0.00'}</p>
+        <button 
+          onClick={() => {
+            console.log('Adding product to cart:', productWithId);
+            addToCart(productWithId);
+          }}
+          className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  );
+};
 
 
  return (
    <div className="min-h-screen bg-gray-50">
-     {/* Header */}
-     <header className="bg-white shadow-sm">
-       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-         <div className="flex justify-between items-center py-4">
-           {/* Logo */}
-           <div className="flex items-center">
-             <h1 className="text-2xl font-bold text-gray-900">ShopOnline</h1>
-           </div>
-
-
-           {/* Navigation */}
-           <nav className="hidden md:flex space-x-8">
-             <Link to="/" className="text-gray-700 hover:text-blue-600">Home</Link>
-             <Link to="/electronics" className="text-gray-700 hover:text-blue-600">Electronics</Link>
-             <Link to="/clothing" className="text-gray-700 hover:text-blue-600">Clothing</Link>
-             <Link to="/new-arrivals" className="text-blue-600 font-medium">New Arrivals</Link>
-             <Link to="/best-sellers" className="text-gray-700 hover:text-blue-600">Best Sellers</Link>
-           </nav>
-
-
-           {/* Mobile menu button */}
-           <div className="md:hidden">
-             <button className="text-gray-600 hover:text-blue-600">
-               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-               </svg>
-             </button>
-           </div>
-
-
-           {/* Right side icons */}
-           <div className="flex items-center space-x-4">
-             {/* Search */}
-             <div className="relative">
-               <input
-                 type="text"
-                 placeholder="Search"
-                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-               />
-               <svg className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-               </svg>
-             </div>
-
-
-             {/* Wishlist */}
-             <button className="p-2 text-gray-600 hover:text-red-500">
-               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-               </svg>
-             </button>
-
-
-             {/* Cart */}
-             <button className="p-2 text-gray-600 hover:text-blue-600">
-               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-               </svg>
-             </button>
-
-
-             {/* User Profile */}
-             <div className="relative group">
-               <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600">
-                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                   {user ? (
-                     <span className="text-white text-sm font-semibold">
-                       {user.email.charAt(0).toUpperCase()}
-                     </span>
-                   ) : (
-                     <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                     </svg>
-                   )}
-                 </div>
-                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                 </svg>
-               </button>
-               {/* Dropdown Menu */}
-               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                 {user ? (
-                   <>
-                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                       {user.email}
-                     </div>
-                     <button
-                       onClick={handleLogout}
-                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                     >
-                       Logout
-                     </button>
-                   </>
-                 ) : (
-                   <>
-                     <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                       Login
-                     </Link>
-                     <Link to="/register" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                       Register
-                     </Link>
-                   </>
-                 )}
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
-     </header>
 
 
      {/* Main Banner */}
