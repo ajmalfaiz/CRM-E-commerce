@@ -1,5 +1,6 @@
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import Dashboard from './components/Dashboard';
 import HomePage from './components/HomePage';
 import Login from './components/Login';
@@ -9,6 +10,7 @@ import Clothing from './components/Clothing';
 import NewArrivals from './components/NewArrivals';
 import BestSellers from './components/BestSellers';
 import CartPage from './pages/CartPage';
+import WishlistPage from './pages/WishlistPage';
 import Header from './components/Header';
 
 
@@ -29,11 +31,13 @@ const routesWithHeader = [
   { path: "/new-arrivals", element: <NewArrivals /> },
   { path: "/best-sellers", element: <BestSellers /> },
   { path: "/cart", element: <CartPage /> },
+  { path: "/wishlist", element: <WishlistPage /> },
 ];
 
 function App() {
   return (
     <CartProvider>
+      <WishlistProvider>
       <Router>
         <Routes>
           {/* Routes without header */}
@@ -50,6 +54,7 @@ function App() {
           ))}
         </Routes>
       </Router>
+      </WishlistProvider>
     </CartProvider>
   );
 }

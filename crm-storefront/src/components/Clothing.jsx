@@ -2,6 +2,7 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import ProductCard from './ProductCard';
 
 
 const Clothing = () => {
@@ -83,50 +84,7 @@ const Clothing = () => {
  };
 
 
- const ProductCard = ({ product }) => {
-    // Ensure product has a proper ID
-    const productWithId = {
-      ...product,
-      id: product.id || `product-${product.title || product.name}-${Math.random().toString(36).substr(2, 9)}`
-    };
-
-    return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-transform duration-300 transform hover:-translate-y-1">
-       <div className="aspect-square overflow-hidden">
-         <img
-           src={
-             product.image
-               ? (product.image.startsWith('/uploads')
-                   ? product.image // Use relative path for uploaded images
-                   : product.image) // Use URL directly for external images
-               : 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center'
-           }
-           alt={product.title || product.name}
-           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-           onError={(e) => {
-             console.log('Image failed to load:', product.image);
-             e.target.src = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop&crop=center';
-           }}
-         />
-       </div>
-       <div className="p-4">
-         <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.title || product.name}</h3>
-         <p className="text-xl font-bold text-blue-600">${product.price || '0.00'}</p>
-         <button 
-           onClick={(e) => {
-             e.preventDefault();
-             e.stopPropagation();
-             console.log('Adding product to cart:', productWithId);
-             addToCart(productWithId);
-           }}
-           className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-         >
-           Add to Cart
-         </button>
-       </div>
-     </div>
-   );
- }
+ // ProductCard component is now imported
 
 
  return (
