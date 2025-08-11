@@ -11,6 +11,7 @@ import NewArrivals from './components/NewArrivals';
 import BestSellers from './components/BestSellers';
 import CartPage from './pages/CartPage';
 import WishlistPage from './pages/WishlistPage';
+import SearchResults from './pages/SearchResults';
 import Header from './components/Header';
 
 
@@ -30,6 +31,7 @@ const routesWithHeader = [
   { path: "/clothing", element: <Clothing /> },
   { path: "/new-arrivals", element: <NewArrivals /> },
   { path: "/best-sellers", element: <BestSellers /> },
+  { path: "/search", element: <SearchResults /> },
   { path: "/cart", element: <CartPage /> },
   { path: "/wishlist", element: <WishlistPage /> },
 ];
