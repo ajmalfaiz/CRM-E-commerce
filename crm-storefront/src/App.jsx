@@ -1,18 +1,19 @@
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
-import { CartProvider } from './context/CartContext';
-import { WishlistProvider } from './context/WishlistContext';
+import BestSellers from './components/BestSellers';
+import Clothing from './components/Clothing';
 import Dashboard from './components/Dashboard';
+import Electronics from './components/Electronics';
+import Header from './components/Header';
 import HomePage from './components/HomePage';
 import Login from './components/Login';
-import Register from './components/Register';
-import Electronics from './components/Electronics';
-import Clothing from './components/Clothing';
 import NewArrivals from './components/NewArrivals';
-import BestSellers from './components/BestSellers';
+import Register from './components/Register';
+import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import CartPage from './pages/CartPage';
-import WishlistPage from './pages/WishlistPage';
+import ProductDetails from './pages/ProductDetails';
 import SearchResults from './pages/SearchResults';
-import Header from './components/Header';
+import WishlistPage from './pages/WishlistPage';
 
 
 // Layout component for pages with header
@@ -34,6 +35,7 @@ const routesWithHeader = [
   { path: "/search", element: <SearchResults /> },
   { path: "/cart", element: <CartPage /> },
   { path: "/wishlist", element: <WishlistPage /> },
+  { path: "/product/:id", element: <ProductDetails /> },
 ];
 
 function App() {

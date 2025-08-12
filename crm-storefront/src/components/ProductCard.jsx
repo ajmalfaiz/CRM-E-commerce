@@ -7,10 +7,11 @@ const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   
-  // Ensure product has a proper ID
+  // Use MongoDB _id for navigation and ensure product has a proper ID for cart/wishlist
+  const productId = product._id || product.id;
   const productWithId = {
     ...product,
-    id: product.id || `product-${product.title || product.name}-${Math.random().toString(36).substr(2, 9)}`
+    id: productId || `product-${product.title || product.name}-${Math.random().toString(36).substr(2, 9)}`
   };
 
   const handleAddToCart = (e) => {
@@ -31,7 +32,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <Link to={`/product/${productWithId.id}`} className="group">
+    <Link to={`/product/${productId}`} className="group">
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-transform duration-300 transform hover:-translate-y-1 h-full flex flex-col">
         <div className="relative aspect-square overflow-hidden">
           <img 

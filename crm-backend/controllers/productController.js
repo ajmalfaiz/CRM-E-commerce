@@ -88,10 +88,37 @@ async function deleteProduct(req, res) {
   }
 }
 
+async function getProductById(req, res) {
+  try {
+    console.log('Getting product by ID:', req.params.id);
+    console.log('User ID:', req.user?.id);
+    console.log('Headers:', req.headers);
+    
+    // For storefront, return any product; for admin, return user-specific products
+    const query = req.headers['x-storefront'] === 'true' 
+      ? { _id: req.params.id }
+      : { _id: req.params.id, user: req.user.id };
+    
+    const product = await Product.findOne(query);
+    
+    if (!product) {
+      console.log('Product not found');
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    console.log('Found product:', product);
+    res.json(product);
+  } catch (err) {
+    console.error('Error getting product by ID:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getAllProducts,
   createProduct,
   updateProduct,
   deleteProduct,
+  getProductById,
   upload // Export multer upload for use in routes
 };
