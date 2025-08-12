@@ -11,6 +11,7 @@ import Register from './components/Register';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import CartPage from './pages/CartPage';
+import MyAccount from './pages/MyAccount';
 import ProductDetails from './pages/ProductDetails';
 import SearchResults from './pages/SearchResults';
 import WishlistPage from './pages/WishlistPage';
@@ -36,6 +37,7 @@ const routesWithHeader = [
   { path: "/cart", element: <CartPage /> },
   { path: "/wishlist", element: <WishlistPage /> },
   { path: "/product/:id", element: <ProductDetails /> },
+  { path: "/my-account", element: <MyAccount /> },
 ];
 
 function App() {

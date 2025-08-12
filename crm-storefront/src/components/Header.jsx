@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
-import Cart from './Cart';
 import Wishlist from './Wishlist';
-import axios from 'axios';
 
 const Header = () => {
   const [user, setUser] = useState(() => {
@@ -214,6 +212,12 @@ const Header = () => {
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
                       {user.email}
                     </div>
+                    <Link
+                      to="/my-account"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      My Account
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
