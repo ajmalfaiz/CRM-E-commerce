@@ -2,6 +2,7 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useProfile } from '../context/ProfileContext';
 import Wishlist from './Wishlist';
 
 const Header = () => {
@@ -23,6 +24,7 @@ const Header = () => {
   const [allProducts, setAllProducts] = useState([]);
   const navigate = useNavigate();
   const { cartItemCount } = useCart();
+  const { profileImage, userName, clearProfile } = useProfile();
   const currentPath = window.location.pathname;
 
   // Fetch all products for search
@@ -82,6 +84,7 @@ const Header = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     setUser(null);
+    clearProfile(); // Clear profile data on logout
     navigate('/login');
   };
 
@@ -189,16 +192,31 @@ const Header = () => {
             {/* User Profile */}
             <div className="relative group">
               <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden">
                   {user ? (
-                    <span className="text-white text-sm font-semibold">
-                      {user.email.charAt(0).toUpperCase()}
-                    </span>
-                  ) : (
-                    <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                  )}
+                    profileImage ? (
+                      <img 
+                        src={profileImage} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null
+                  ) : null}
+                  <div className={`w-full h-full flex items-center justify-center ${profileImage ? 'hidden' : 'flex'}`}>
+                    {user ? (
+                      <span className="text-white text-sm font-semibold">
+                        {userName ? userName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                      </span>
+                    ) : (
+                      <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
                 </div>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -210,7 +228,7 @@ const Header = () => {
                 {user ? (
                   <>
                     <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                      {user.email}
+                      {userName || user.email}
                     </div>
                     <Link
                       to="/my-account"

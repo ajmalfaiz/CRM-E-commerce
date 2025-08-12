@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useProfile } from '../context/ProfileContext';
 
 const MyAccount = () => {
   const navigate = useNavigate();
   const { cartItemCount } = useCart();
+  const { profileImage, userName, updateProfileImage, updateUserName } = useProfile();
   const [user, setUser] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [userName, setUserName] = useState('Manikant');
-  const [profileImage, setProfileImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [tempUserName, setTempUserName] = useState(userName);
+  const [tempProfileImage, setTempProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(profileImage);
   const [imageInputType, setImageInputType] = useState('upload'); // 'upload' or 'url'
   const [imageUrl, setImageUrl] = useState('');
 
@@ -30,6 +32,16 @@ const MyAccount = () => {
     }
   }, [navigate]);
 
+  // Sync tempUserName when userName changes
+  useEffect(() => {
+    setTempUserName(userName);
+  }, [userName]);
+
+  // Sync imagePreview when profileImage changes
+  useEffect(() => {
+    setImagePreview(profileImage);
+  }, [profileImage]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -41,12 +53,12 @@ const MyAccount = () => {
 
   const handleNameSave = () => {
     setIsEditingName(false);
-    // Here you would typically save to backend
-    console.log('Saving name:', userName);
+    updateUserName(tempUserName);
+    console.log('Saving name:', tempUserName);
   };
 
   const handleNameCancel = () => {
-    setUserName('Manikant'); // Reset to original
+    setTempUserName(userName); // Reset to original
     setIsEditingName(false);
   };
 
@@ -56,7 +68,7 @@ const MyAccount = () => {
       setImageUrl('');
       setImagePreview(null);
     } else {
-      setProfileImage(null);
+      setTempProfileImage(null);
       setImagePreview(null);
     }
   };
@@ -64,7 +76,7 @@ const MyAccount = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setProfileImage(file);
+      setTempProfileImage(file);
       const reader = new FileReader();
       reader.onload = () => {
         setImagePreview(reader.result);
@@ -80,25 +92,28 @@ const MyAccount = () => {
 
   const handleImageSave = async () => {
     try {
-      if (imageInputType === 'upload' && profileImage) {
+      if (imageInputType === 'upload' && tempProfileImage) {
         // Handle file upload
         const formData = new FormData();
-        formData.append('profileImage', profileImage);
+        formData.append('profileImage', tempProfileImage);
         
         // Here you would typically send to backend
-        console.log('Uploading profile image:', profileImage);
+        console.log('Uploading profile image:', tempProfileImage);
         console.log('FormData:', formData);
         
-        // For now, just update the preview
-        setImagePreview(URL.createObjectURL(profileImage));
+        // Update the profile image in context (this will persist)
+        const imageUrl = URL.createObjectURL(tempProfileImage);
+        updateProfileImage(imageUrl);
+        setImagePreview(imageUrl);
       } else if (imageInputType === 'url' && imageUrl) {
         // Handle URL
         console.log('Setting profile image URL:', imageUrl);
+        updateProfileImage(imageUrl);
         setImagePreview(imageUrl);
       }
       
       // Reset form
-      setProfileImage(null);
+      setTempProfileImage(null);
       setImageUrl('');
       setImageInputType('upload');
     } catch (error) {
@@ -170,8 +185,8 @@ const MyAccount = () => {
               <div className="flex items-center justify-center space-x-2">
                 <input
                   type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
+                  value={tempUserName}
+                  onChange={(e) => setTempUserName(e.target.value)}
                   className="text-2xl font-semibold text-gray-900 text-center border-b-2 border-blue-500 focus:outline-none focus:border-blue-600"
                   autoFocus
                 />
@@ -278,7 +293,7 @@ const MyAccount = () => {
           )}
 
           {/* Save Button */}
-          {(profileImage || imageUrl) && (
+          {(tempProfileImage || imageUrl) && (
             <button
               onClick={handleImageSave}
               className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
@@ -310,81 +325,6 @@ const MyAccount = () => {
               />
             </div>
           </div>
-        </div>
-
-        {/* Profile Image Upload Section */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Profile Image</h3>
-          
-          {/* Image Input Type Selection */}
-          <div className="flex space-x-4 mb-6">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="imageInputType"
-                value="upload"
-                checked={imageInputType === 'upload'}
-                onChange={() => handleImageInputTypeChange('upload')}
-                className="mr-2"
-              />
-              <span className="text-gray-700">Upload Image</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="imageInputType"
-                value="url"
-                checked={imageInputType === 'url'}
-                onChange={() => handleImageInputTypeChange('url')}
-                className="mr-2"
-              />
-              <span className="text-gray-700">Image URL</span>
-            </label>
-          </div>
-
-          {/* Upload Image Input */}
-          {imageInputType === 'upload' && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Choose Profile Image
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Supported formats: JPG, PNG, GIF. Max size: 5MB
-              </p>
-            </div>
-          )}
-
-          {/* Image URL Input */}
-          {imageInputType === 'url' && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Image URL
-              </label>
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={handleImageUrlChange}
-                placeholder="https://example.com/image.jpg"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          {/* Save Button */}
-          {(profileImage || imageUrl) && (
-            <button
-              onClick={handleImageSave}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Save Image
-            </button>
-          )}
         </div>
 
         {/* Shipping Addresses Section */}
@@ -504,19 +444,19 @@ const MyAccount = () => {
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Account Settings</h3>
           <div className="space-y-4 mb-6">
-            <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
               <span className="text-gray-900">Manage Login Credentials</span>
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
-            <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
               <span className="text-gray-900">Communication Preferences</span>
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
-            <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <button className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
               <span className="text-gray-900">Privacy Settings</span>
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -558,7 +498,7 @@ const MyAccount = () => {
 
             {/* Consumer Policy */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">CONSUMER POLICY</h3>
+              <h3 className="text-xl font-semibold mb-4">CONSUMER POLICY</h3>
               <ul className="space-y-2">
                 <li><a href="#" className="text-gray-300 hover:text-white">Terms of Use</a></li>
                 <li><a href="#" className="text-gray-300 hover:text-white">Security</a></li>

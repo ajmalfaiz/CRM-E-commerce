@@ -9,6 +9,7 @@ import Login from './components/Login';
 import NewArrivals from './components/NewArrivals';
 import Register from './components/Register';
 import { CartProvider } from './context/CartContext';
+import { ProfileProvider } from './context/ProfileContext';
 import { WishlistProvider } from './context/WishlistContext';
 import CartPage from './pages/CartPage';
 import MyAccount from './pages/MyAccount';
@@ -42,26 +43,28 @@ const routesWithHeader = [
 
 function App() {
   return (
-    <CartProvider>
-      <WishlistProvider>
-      <Router>
-        <Routes>
-          {/* Routes without header */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Routes with header */}
-          {routesWithHeader.map((route) => (
-            <Route
-              key={route.path}
-              path={route.path}
-              element={<Layout>{route.element}</Layout>}
-            />
-          ))}
-        </Routes>
-      </Router>
-      </WishlistProvider>
-    </CartProvider>
+    <ProfileProvider>
+      <CartProvider>
+        <WishlistProvider>
+          <Router>
+            <Routes>
+              {/* Routes without header */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              
+              {/* Routes with header */}
+              {routesWithHeader.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={<Layout>{route.element}</Layout>}
+                />
+              ))}
+            </Routes>
+          </Router>
+        </WishlistProvider>
+      </CartProvider>
+    </ProfileProvider>
   );
 }
 
