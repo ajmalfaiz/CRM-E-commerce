@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import OrderHistory from '../components/OrderHistory';
 import { useCart } from '../context/CartContext';
 import { useProfile } from '../context/ProfileContext';
 
@@ -392,53 +393,7 @@ const MyAccount = () => {
         </div>
 
         {/* Order History Section */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Order History</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Number</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#12345</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">July 15, 2023</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$150.00</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                      Shipped
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#67890</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">June 20, 2023</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$75.50</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                      Delivered
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#11223</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">May 5, 2023</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$200.00</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                      Delivered
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <OrderHistory />
 
         {/* Account Settings Section */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">

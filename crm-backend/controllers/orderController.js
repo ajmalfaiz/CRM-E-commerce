@@ -1,54 +1,136 @@
 const Order = require('../models/Order');
 const User = require('../models/User');
-const Product = require('../models/Product');
 
 // Create a new order
-exports.addOrder = async (req, res) => {
+async function createOrder(req, res) {
   try {
-    const {
-      products, total, // original
-      orderId, productTitle, price, customer, date, type, status // new
-    } = req.body;
-    const userId = req.user?.id; // Always try to get user from token
-    let order;
-    if (orderId && productTitle && price && customer && date && type && status) {
-      // Direct product order
-      order = new Order({
-        user: userId, // associate user if available
-        orderId,
-        productTitle,
-        price,
-        customer,
-        date,
-        type,
-        status
-      });
-    } else {
-      // Original cart order
-      if (!products || !Array.isArray(products) || products.length === 0) {
-        return res.status(400).json({ message: 'Products are required.' });
-      }
-      order = new Order({
-        user: userId,
-        products,
-        total,
-      });
+    const { items, shippingAddress, shippingMethod, paymentMethod, subtotal, shippingCost, total } = req.body;
+    
+    // Verify user is authenticated
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
-    await order.save();
-    res.status(201).json(order);
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to create order', error: error.message });
-  }
-};
 
-// Get all orders
-exports.getOrders = async (req, res) => {
-  try {
-    const orders = await Order.find()
-      .populate('user', 'email')
-      .populate('products.product', 'name');
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch orders', error: error.message });
+    // Create order with user ID
+    const order = new Order({
+      user: req.user.id,
+      items,
+      shippingAddress,
+      shippingMethod,
+      paymentMethod,
+      subtotal,
+      shippingCost,
+      total
+    });
+
+    await order.save();
+    
+    // Populate product details for response
+    await order.populate('items.product');
+    
+    res.status(201).json(order);
+  } catch (err) {
+    console.error('Error creating order:', err);
+    res.status(500).json({ error: err.message });
   }
+}
+
+// Get all orders for the authenticated user
+async function getUserOrders(req, res) {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const orders = await Order.find({ user: req.user.id })
+      .populate('items.product')
+      .sort({ orderDate: -1 });
+
+    res.json(orders);
+  } catch (err) {
+    console.error('Error getting user orders:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Get a specific order by ID
+async function getOrderById(req, res) {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const order = await Order.findOne({ 
+      _id: req.params.id, 
+      user: req.user.id 
+    }).populate('items.product');
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json(order);
+  } catch (err) {
+    console.error('Error getting order:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Update order status (for admin use)
+async function updateOrderStatus(req, res) {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { status } = req.body;
+    const order = await Order.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id },
+      { status },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json(order);
+  } catch (err) {
+    console.error('Error updating order status:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// Get order statistics for the user
+async function getOrderStats(req, res) {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const stats = await Order.aggregate([
+      { $match: { user: req.user.id } },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: '$total' },
+          averageOrderValue: { $avg: '$total' }
+        }
+      }
+    ]);
+
+    res.json(stats[0] || { totalOrders: 0, totalSpent: 0, averageOrderValue: 0 });
+  } catch (err) {
+    console.error('Error getting order stats:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = {
+  createOrder,
+  getUserOrders,
+  getOrderById,
+  updateOrderStatus,
+  getOrderStats
 }; 

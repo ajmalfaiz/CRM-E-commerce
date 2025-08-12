@@ -12,6 +12,7 @@ import { CartProvider } from './context/CartContext';
 import { ProfileProvider } from './context/ProfileContext';
 import { WishlistProvider } from './context/WishlistContext';
 import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
 import MyAccount from './pages/MyAccount';
 import ProductDetails from './pages/ProductDetails';
 import SearchResults from './pages/SearchResults';
@@ -36,6 +37,7 @@ const routesWithHeader = [
   { path: "/best-sellers", element: <BestSellers /> },
   { path: "/search", element: <SearchResults /> },
   { path: "/cart", element: <CartPage /> },
+  { path: "/checkout", element: <CheckoutPage /> },
   { path: "/wishlist", element: <WishlistPage /> },
   { path: "/product/:id", element: <ProductDetails /> },
   { path: "/my-account", element: <MyAccount /> },
