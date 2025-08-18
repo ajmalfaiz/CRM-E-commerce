@@ -12,7 +12,8 @@ import {
     PhoneIcon,
     PlusIcon,
     UserGroupIcon,
-    XMarkIcon
+    XMarkIcon,
+    SparklesIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
@@ -29,6 +30,12 @@ const Leads = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragItem, setDragItem] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiForm, setAiForm] = useState({
+    location: '',
+    businessType: ''
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
   const [newLead, setNewLead] = useState({
     name: '',
     email: '',
@@ -79,12 +86,17 @@ const Leads = () => {
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        const response = await axios.get('/api/customers');
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/customers', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         console.log('Fetched leads:', response.data);
         setLeads(response.data);
-        setLoading(false);
       } catch (error) {
         console.error('Error fetching leads:', error);
+      } finally {
         setLoading(false);
       }
     };
@@ -92,19 +104,36 @@ const Leads = () => {
     fetchLeads();
   }, []);
 
+  // Debug: Log all leads and their statuses
+  useEffect(() => {
+    console.log('All leads:', leads);
+    console.log('Lead statuses:', [...new Set(leads.map(lead => lead.status))]);
+  }, [leads]);
+
   // Filter leads based on search term, source, and date range
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        lead.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        lead.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (lead.name && lead.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesSource = leadSource === 'All' || lead.leadSource === leadSource;
     
-    const leadDate = new Date(lead.createdAt);
+    const leadDate = lead.createdAt ? new Date(lead.createdAt) : new Date();
     const matchesDate = leadDate >= dateRange.startDate && leadDate <= dateRange.endDate;
     
     return matchesSearch && matchesSource && matchesDate;
   });
+  
+  // Debug: Log filtered leads
+  useEffect(() => {
+    console.log('Filtered leads:', filteredLeads);
+    console.log('Leads by status:', {
+      'Untouched': filteredLeads.filter(l => l.status === 'Untouched'),
+      'HPL': filteredLeads.filter(l => l.status === 'HPL'),
+      'MPL': filteredLeads.filter(l => l.status === 'MPL'),
+      'LPL': filteredLeads.filter(l => l.status === 'LPL')
+    });
+  }, [filteredLeads]);
 
   // Handle drag start
   const onDragStart = (e, lead) => {
@@ -193,13 +222,22 @@ const Leads = () => {
             <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
             Export
           </button>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Add Lead
-          </button>
+          <div className="flex space-x-3">
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700"
+            >
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Add Lead
+            </button>
+            <button 
+              onClick={() => setShowAIModal(true)}
+              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-purple-700"
+            >
+              <SparklesIcon className="h-4 w-4 mr-2" />
+              Generate Lead by AI
+            </button>
+          </div>
         </div>
       </div>
 
@@ -292,7 +330,7 @@ const Leads = () => {
                     </button>
                     <h3 className="font-medium">{column.title}</h3>
                     <span className="ml-2 bg-white bg-opacity-50 text-xs font-medium px-2 py-0.5 rounded-full">
-                      {filteredLeads.filter(lead => lead.status === column.status).length}
+                      {filteredLeads.filter(lead => lead.status && lead.status.toLowerCase() === column.status.toLowerCase()).length}
                     </span>
                   </div>
                   <button className="text-gray-500 hover:text-gray-700">
@@ -307,7 +345,7 @@ const Leads = () => {
                     onDrop={(e) => onDrop(e, column.status)}
                   >
                     {filteredLeads
-                      .filter(lead => lead.status === column.status)
+                      .filter(lead => lead.status && lead.status.toLowerCase() === column.status.toLowerCase())
                       .map(lead => (
                         <div
                           key={lead._id}
@@ -432,6 +470,137 @@ const Leads = () => {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Lead Generation Modal */}
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Generate Leads with AI</h3>
+              <button 
+                onClick={() => setShowAIModal(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!aiForm.location || !aiForm.businessType) {
+                alert('Please provide both location and business type');
+                return;
+              }
+              
+              setIsGenerating(true);
+              console.log('Starting AI lead generation with:', aiForm);
+              
+              try {
+                // Get the token from localStorage
+                const token = localStorage.getItem('token');
+                if (!token) {
+                  throw new Error('Authentication required. Please log in again.');
+                }
+                
+                console.log('Sending request to generate AI leads...');
+                const response = await axios.post('/api/customers/ai-generate', 
+                  {
+                    location: aiForm.location,
+                    businessType: aiForm.businessType
+                  },
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                    }
+                  }
+                );
+                
+                // Close the modal and reset form
+                setShowAIModal(false);
+                setAiForm({ location: '', businessType: '' });
+                
+                // Refresh the leads list
+                const updatedLeads = await axios.get('/api/customers', {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                
+                setLeads(updatedLeads.data);
+                alert(`Successfully generated ${response.data.length} leads!`);
+                
+              } catch (error) {
+                console.error('Error in AI lead generation:', {
+                  error,
+                  response: error.response?.data,
+                  status: error.response?.status
+                });
+                
+                let errorMessage = 'Failed to generate leads. Please try again.';
+                if (error.response?.data?.error) {
+                  errorMessage = error.response.data.error;
+                } else if (error.message) {
+                  errorMessage = error.message;
+                }
+                
+                alert(`Error: ${errorMessage}`);
+              } finally {
+                setIsGenerating(false);
+              }
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+                    Location (e.g., Delhi, Mumbai)
+                  </label>
+                  <input
+                    type="text"
+                    id="location"
+                    value={aiForm.location}
+                    onChange={(e) => setAiForm({...aiForm, location: e.target.value})}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                    placeholder="Enter location"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="businessType" className="block text-sm font-medium text-gray-700">
+                    Type of Business (e.g., gym, restaurant, school)
+                  </label>
+                  <input
+                    type="text"
+                    id="businessType"
+                    value={aiForm.businessType}
+                    onChange={(e) => setAiForm({...aiForm, businessType: e.target.value})}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                    placeholder="Enter business type"
+                    required
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAIModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isGenerating}
+                    className={`px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 ${isGenerating ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    {isGenerating ? 'Generating...' : 'Generate Leads'}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

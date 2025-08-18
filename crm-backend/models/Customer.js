@@ -19,6 +19,14 @@ const CustomerSchema = new mongoose.Schema({
     enum: ['Untouched', 'HPL', 'MPL', 'LPL']
   },
   notes: String,
+  company: {
+    type: String,
+    default: ''
+  },
+  leadSource: {
+    type: String,
+    default: 'Manual Entry'
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
