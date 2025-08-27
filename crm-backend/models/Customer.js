@@ -31,6 +31,18 @@ const CustomerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: false
+  },
+  callLogs: [{
+    callId: String,
+    timestamp: Date,
+    event: String,
+    duration: Number,
+    recordingUrl: String,
+    notes: String
+  }],
+  lastCallAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 

@@ -1,7 +1,16 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
+
+// Configure CORS
+const corsOptions = {
+  origin: 'http://localhost:5173', // Your frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
 
 // Connect to MongoDB
 mongoose.connect('mongodb+srv://manikant2123:n4971K1h9FeDSwQ2@cluster0.bppu43r.mongodb.net/commers', {
@@ -11,15 +20,21 @@ mongoose.connect('mongodb+srv://manikant2123:n4971K1h9FeDSwQ2@cluster0.bppu43r.m
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 const app = express();
+
+// Apply CORS with options
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
+
+// Parse JSON bodies
+app.use(express.json());
+
+// Import routes
 const productRoutes = require('./routes/productRoutes');
 const authRoutes = require('./routes/authRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const authenticateToken = require('./middleware/authMiddleware');
 const port = process.env.PORT || 3000;
-
-app.use(cors());
-app.use(express.json());
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

@@ -149,6 +149,105 @@ const Leads = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
+  // Handle call lead
+  const handleCallLead = async (leadId, phoneNumber) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in to make calls');
+        return;
+      }
+
+      // Log the raw parameters
+      console.log('handleCallLead called with:', { leadId, phoneNumber });
+
+      // Ensure we have a valid lead ID
+      if (!leadId) {
+        console.error('No lead ID provided to handleCallLead');
+        alert('Error: No lead ID provided');
+        return;
+      }
+
+      // Convert leadId to string if it's an object
+      const stringLeadId = leadId && typeof leadId === 'object' 
+        ? (leadId._id || leadId.id || leadId.toString())
+        : String(leadId);
+      
+      if (!stringLeadId) {
+        console.error('Could not convert lead ID to string:', leadId);
+        alert('Error: Invalid lead ID format');
+        return;
+      }
+
+      // Clean up the phone number (remove non-numeric characters except +)
+      const cleanPhoneNumber = phoneNumber ? phoneNumber.replace(/[^0-9+]/g, '') : '';
+      
+      if (!cleanPhoneNumber) {
+        console.error('No valid phone number provided');
+        alert('Error: No valid phone number provided');
+        return;
+      }
+
+      const url = `http://localhost:3000/api/customers/${encodeURIComponent(stringLeadId)}/call`;
+      const requestData = { 
+        phoneNumber: cleanPhoneNumber,
+        leadId: stringLeadId // Include leadId in the body as well for redundancy
+      };
+
+      console.log('Making API call:', {
+        method: 'POST',
+        url,
+        data: requestData,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Sending call request to:', url, 'with data:', requestData);
+      
+      const response = await axios.post(url, requestData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        validateStatus: (status) => status < 500 // Don't throw for 4xx errors
+      });
+      
+      console.log('Call response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+        headers: response.headers
+      });
+      
+      if (response.status >= 200 && response.status < 300) {
+        // If we get here, the call was initiated successfully
+        console.log('Call initiated successfully, showing success message');
+        alert('Call initiated successfully! The system is connecting your call...');
+        
+        // Try to refresh the leads, but don't let it fail the whole operation
+        try {
+          const updatedLeads = await axios.get('http://localhost:3000/api/customers', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          setLeads(updatedLeads.data);
+        } catch (refreshError) {
+          console.warn('Failed to refresh leads (non-critical):', refreshError);
+        }
+      } else {
+        throw new Error(response.data?.error || 'Failed to initiate call');
+      }
+    } catch (error) {
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      alert(`Failed to initiate call: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
   // Handle drop
   const onDrop = async (e, status) => {
     e.preventDefault();
@@ -353,23 +452,37 @@ const Leads = () => {
                           onDragStart={(e) => onDragStart(e, lead)}
                           className="bg-white p-3 mb-2 rounded-md shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-move"
                         >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium">{lead.name}</h4>
-                              <p className="text-sm text-gray-600">{lead.email}</p>
-                              <div className="mt-2 flex items-center text-xs text-gray-500">
-                                <span className="inline-flex items-center">
-                                  <PhoneIcon className="h-3 w-3 mr-1" />
-                                  {lead.phone}
-                                </span>
-                              </div>
-                              {lead.notes && (
-                                <div className="mt-2 p-2 bg-blue-50 text-xs text-gray-700 rounded">
-                                  {lead.notes}
+                          <div className="flex justify-between items-start w-full">
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-medium">{lead.name}</h4>
+                                  <p className="text-sm text-gray-600">{lead.email}</p>
+                                  <div className="mt-2 flex items-center text-xs text-gray-500">
+                                    <span className="inline-flex items-center">
+                                      <PhoneIcon className="h-3 w-3 mr-1" />
+                                      {lead.phone}
+                                    </span>
+                                  </div>
+                                  {lead.notes && (
+                                    <div className="mt-2 p-2 bg-blue-50 text-xs text-gray-700 rounded">
+                                      {lead.notes}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCallLead(lead._id, lead.phone);
+                                  }}
+                                  className="ml-2 p-1.5 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors"
+                                  title="Call Lead"
+                                >
+                                  <PhoneIcon className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex flex-col items-end">
+                            <div className="flex flex-col items-end ml-2">
                               <span className="text-xs text-gray-500">{format(new Date(lead.createdAt), 'MMM d')}</span>
                             </div>
                           </div>
