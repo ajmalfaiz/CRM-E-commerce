@@ -112,22 +112,85 @@ const callLead = async (req, res) => {
       agentId: callData.agent_id
     });
 
-    // 6. Make the Retell API call
+            // 6. Make the Retell API call
     let call;
     try {
-      call = await retell.call.createPhoneCall(callData);
-      log('Retell API response', { callId: call?.call_id });
-    } catch (apiError) {
-      log('Retell API error', { 
-        error: apiError.message,
-        status: apiError.response?.status,
-        data: apiError.response?.data
+      log('Sending request to Retell API', { 
+        from: callData.from_number,
+        to: '***REDACTED***',
+        agentId: callData.agent_id 
       });
+      
+      // Add timeout to the API call
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      call = await retell.call.createPhoneCall(callData, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      log('Retell API response received', { 
+        callId: call?.call_id,
+        status: call?.status 
+      });
+      
+      if (!call?.call_id) {
+        throw new Error('Missing call_id in Retell API response');
+      }
+      
+      // Immediately update lead status to show call is being connected
+      await Customer.findByIdAndUpdate(
+        leadId,
+        { 
+          $set: { 
+            status: 'Call Connecting',
+            lastCallAt: new Date() 
+          },
+          $push: {
+            callLogs: {
+              callId: call.call_id,
+              timestamp: new Date(),
+              event: 'call_connecting',
+              notes: 'Call is being connected via Retell AI'
+            }
+          }
+        },
+        { new: true }
+      );
+      
+    } catch (apiError) {
+      const errorDetails = {
+        message: apiError.message,
+        status: apiError.response?.status,
+        data: apiError.response?.data,
+        stack: process.env.NODE_ENV === 'development' ? apiError.stack : undefined
+      };
+      
+      log('❌ Retell API error', errorDetails);
+      
+      // Update lead with error status
+      try {
+        await Customer.findByIdAndUpdate(
+          leadId,
+          {
+            $push: {
+              callLogs: {
+                timestamp: new Date(),
+                event: 'call_failed',
+                notes: `Failed to initiate call: ${apiError.message}`,
+                error: errorDetails
+              }
+            }
+          }
+        );
+      } catch (updateError) {
+        log('Failed to update lead with error status', { error: updateError.message });
+      }
       
       return res.status(apiError.response?.status || 500).json({
         success: false,
-        error: 'Failed to initiate call with Retell API',
-        details: apiError.response?.data || apiError.message
+        error: 'Failed to initiate call',
+        details: apiError.response?.data?.error || apiError.message,
+        code: 'CALL_INITIATION_FAILED'
       });
     }
 
@@ -191,60 +254,108 @@ const callLead = async (req, res) => {
 
 // Webhook handler for call events
 const handleCallEvent = async (req, res) => {
-  console.log('📩 Received webhook event:', {
-    headers: req.headers,
-    body: req.body,
-    timestamp: new Date().toISOString()
-  });
-
-  const { event, eventType, callId, call_id, metadata, error } = req.body;
-
+  const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  
+  const logEvent = (message, data = {}) => {
+    console.log(`[${eventId}] ${message}`, Object.keys(data).length ? data : '');
+  };
+  
   try {
+    logEvent('📩 Received webhook event', {
+      type: req.body.event || req.body.eventType,
+      callId: req.body.call_id || req.body.callId,
+      timestamp: new Date().toISOString()
+    });
+    
+    const { event, eventType, callId, call_id, metadata, error } = req.body;
     const effectiveEvent = event || eventType;
     const effectiveCallId = callId || call_id;
+    
+    if (!effectiveCallId) {
+      throw new Error('Missing call_id in webhook payload');
+    }
 
     if (!metadata || !metadata.leadId) {
-      return res.status(400).json({ error: 'Missing leadId in metadata' });
+      logEvent('Missing leadId in metadata', { body: req.body });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing leadId in metadata',
+        eventId
+      });
     }
-
-    const lead = await Customer.findById(metadata.leadId);
-    if (!lead) {
-      return res.status(404).json({ error: 'Lead not found', leadId: metadata.leadId });
-    }
-
-    console.log(`🔄 Processing ${effectiveEvent} for lead:`, {
-      leadId: lead._id,
-      callId: effectiveCallId
-    });
-
-    // Update call log
-    const logEntry = {
+    
+    const leadId = metadata.leadId;
+    logEvent('Processing event', { 
+      event: effectiveEvent, 
       callId: effectiveCallId,
-      timestamp: new Date(),
-      event: effectiveEvent,
-      notes: `Call ${effectiveEvent} at ${new Date().toISOString()}`,
-      details: {}
+      leadId 
+    });
+    
+    // Find and update the lead based on the call event
+    const update = {
+      $push: {
+        callLogs: {
+          callId: effectiveCallId,
+          timestamp: new Date(),
+          event: effectiveEvent,
+          metadata: metadata || {}
+        }
+      },
+      lastUpdated: new Date()
     };
-
-    if (error) {
-      logEntry.details.error = error;
-      logEntry.notes += ` - Error: ${error.message || JSON.stringify(error)}`;
+    
+    // Update status based on event type
+    if (effectiveEvent === 'call_answered') {
+      update.$set = { status: 'In Call' };
+    } else if (effectiveEvent === 'call_ended') {
+      update.$set = { 
+        status: 'Call Completed',
+        lastCallAt: new Date()
+      };
+    } else if (effectiveEvent === 'call_failed') {
+      update.$set = { 
+        status: 'Call Failed',
+        lastCallAt: new Date()
+      };
+      update.$push.callLogs.error = error || 'Unknown error';
     }
-
-    lead.callLogs = lead.callLogs || [];
-    lead.callLogs.push(logEntry);
-
-    // Update status when call ends
-    if (['call.ended', 'call.failed', 'call.completed'].includes(effectiveEvent)) {
-      lead.status = 'HPL';
-      lead.lastCallAt = new Date();
+    
+    const updatedLead = await Customer.findByIdAndUpdate(
+      leadId,
+      update,
+      { new: true }
+    );
+    
+    if (!updatedLead) {
+      logEvent('Lead not found', { leadId });
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Lead not found',
+        eventId
+      });
     }
-
-    await lead.save();
-    res.status(200).end();
-  } catch (err) {
-    console.error('❌ Error handling call event:', err);
-    res.status(500).end();
+    
+    logEvent('Lead updated successfully', { 
+      leadId,
+      status: update.$set?.status || 'status_unchanged',
+      event: effectiveEvent
+    });
+    
+    return res.json({ 
+      success: true,
+      eventId,
+      callId: effectiveCallId,
+      leadId,
+      status: update.$set?.status
+    });
+  } catch (error) {
+    console.error('Error in webhook handler:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to process webhook event',
+      details: error.message,
+      eventId
+    });
   }
 };
 
