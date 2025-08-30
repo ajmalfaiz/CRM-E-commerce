@@ -188,13 +188,23 @@ const Leads = () => {
         return;
       }
 
+      // Optimistically update the UI
+      setLeads(prevLeads => 
+        prevLeads.map(lead => 
+          lead._id === stringLeadId 
+            ? { ...lead, status: 'HPL' } 
+            : lead
+        )
+      );
+
       const url = `http://localhost:3000/api/customers/${encodeURIComponent(stringLeadId)}/call`;
       const requestData = { 
         phoneNumber: cleanPhoneNumber,
-        leadId: stringLeadId // Include leadId in the body as well for redundancy
+        leadId: stringLeadId,
+        status: 'HPL' // Explicitly set status to HPL
       };
 
-      console.log('Making API call:', {
+      console.log('Initiating call with data:', {
         method: 'POST',
         url,
         data: requestData,

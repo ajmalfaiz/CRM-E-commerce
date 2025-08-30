@@ -49,4 +49,7 @@ router.post(
 // Test route for debugging lead saving
 router.post('/test-save', aiController.testSaveLead);
 
+// Get call logs
+router.get('/calls/logs', controller.getCallLogs);
+
 module.exports = router;

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   PhoneIcon,
   ChatBubbleLeftRightIcon,
@@ -10,42 +11,27 @@ import {
   UserCircleIcon,
   CalendarIcon,
   PaperAirplaneIcon,
-  LinkIcon
+  LinkIcon,
+  ArrowPathIcon as RefreshIcon
 } from '@heroicons/react/24/outline';
+import { format } from 'date-fns';
 
-// Sample data for AI Calls Log
-const aiCalls = [
-  {
-    id: 1,
-    leadName: 'John Smith',
-    time: '2023-07-09T10:30:00',
-    status: 'Completed',
-    outcome: 'Interested',
-    summary: 'Discussed product features and pricing. Lead showed interest in the premium plan.',
-    documents: ['Product_Brochure.pdf', 'Pricing_Sheet.pdf'],
-    productLinks: ['/products/premium-plan']
-  },
-  {
-    id: 2,
-    leadName: 'Sarah Johnson',
-    time: '2023-07-09T09:15:00',
-    status: 'Missed',
-    outcome: 'No Answer',
-    summary: 'Call was not answered. Left a voicemail with callback information.',
-    documents: [],
-    productLinks: []
-  },
-  {
-    id: 3,
-    leadName: 'Michael Chen',
-    time: '2023-07-08T16:45:00',
-    status: 'Completed',
-    outcome: 'Not Interested',
-    summary: 'Lead mentioned they already have a solution in place. Not interested at this time.',
-    documents: [],
-    productLinks: []
-  }
-];
+// Status badge component
+const StatusBadge = ({ status }) => {
+  const statusClasses = {
+    'In Progress': 'bg-blue-100 text-blue-800 border-blue-200',
+    'Completed': 'bg-green-100 text-green-800 border-green-200',
+    'Missed': 'bg-red-100 text-red-800 border-red-200',
+    'Call Initiated': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'default': 'bg-gray-100 text-gray-800 border-gray-200'
+  };
+
+  return (
+    <span className={`px-2 py-1 text-xs font-medium rounded-full border ${statusClasses[status] || statusClasses['default']}`}>
+      {status}
+    </span>
+  );
+};
 
 // Sample data for WhatsApp Conversations
 const whatsappChats = [
@@ -101,55 +87,92 @@ const scheduledFollowUps = [
 ];
 
 const AICenter = () => {
-  const [activeTab, setActiveTab] = useState('calls');
+  const [activeTab, setActiveTab] = useState('ai-calls');
+  const [callLogs, setCallLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch call logs from the backend
+  const fetchCallLogs = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please log in to view call logs');
+      }
+
+      const response = await axios.get('http://localhost:3000/api/customers/calls/logs', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      setCallLogs(response.data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching call logs:', err);
+      setError('Failed to load call logs. Please try again.');
+      setCallLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'ai-calls') {
+      fetchCallLogs();
+    }
+  }, [activeTab]);
+
   const [selectedCall, setSelectedCall] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedFollowUp, setSelectedFollowUp] = useState(null);
   const [showCallDetails, setShowCallDetails] = useState(false);
   const [showChatWindow, setShowChatWindow] = useState(false);
   const [showFollowUpDetails, setShowFollowUpDetails] = useState(false);
-  const [message, setMessage] = useState('');
-  
+  const [message, setMessage] = useState(''); // Initialize with empty string
+
   const handleCallSelect = (call) => {
     setSelectedCall(call);
     setShowCallDetails(true);
     setShowChatWindow(false);
     setShowFollowUpDetails(false);
   };
-  
+
   const handleChatSelect = (chat) => {
     setSelectedChat(chat);
     setShowChatWindow(true);
     setShowCallDetails(false);
     setShowFollowUpDetails(false);
   };
-  
+
   const handleFollowUpSelect = (followUp) => {
     setSelectedFollowUp(followUp);
     setShowFollowUpDetails(true);
     setShowCallDetails(false);
     setShowChatWindow(false);
   };
-  
+
   const handleSendMessage = () => {
     if (message.trim() === '') return;
-    
+
     // In a real app, this would send the message to the server
     console.log('Sending message:', message);
     setMessage('');
   };
-  
+
   const handleReschedule = (followUpId, newTime) => {
     // In a real app, this would update the scheduled time on the server
     console.log(`Rescheduling follow-up ${followUpId} to ${newTime}`);
     setShowFollowUpDetails(false);
   };
-  
+
   const handleForceHuman = (interactionId) => {
     // In a real app, this would trigger a human to take over
     console.log(`Requesting human override for interaction ${interactionId}`);
   };
-  
+
   const markFollowUpDone = (followUpId) => {
     // In a real app, this would update the status on the server
     console.log(`Marking follow-up ${followUpId} as done`);
@@ -161,13 +184,13 @@ const AICenter = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">AI Calling & Messaging Center</h1>
       </div>
-      
+
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('calls')}
-            className={`${activeTab === 'calls' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+            onClick={() => setActiveTab('ai-calls')}
+            className={`${activeTab === 'ai-calls' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
           >
             <PhoneIcon className="h-5 w-5 mr-2" />
             AI Calls Log
@@ -188,54 +211,96 @@ const AICenter = () => {
           </button>
         </nav>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left sidebar - List */}
         <div className={`${(showCallDetails || showChatWindow || showFollowUpDetails) ? 'lg:col-span-1' : 'lg:col-span-3'}`}>
-          {activeTab === 'calls' && (
+          {activeTab === 'ai-calls' && (
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-              <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">AI Call Logs</h3>
-                <p className="mt-1 text-sm text-gray-500">Recent AI calls with leads</p>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium text-gray-900">Call Logs</h2>
+                <button
+                  onClick={fetchCallLogs}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                  <RefreshIcon className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
               </div>
-              <ul className="divide-y divide-gray-200 max-h-[calc(100vh-250px)] overflow-y-auto">
-                {aiCalls.map((call) => (
-                  <li 
-                    key={call.id}
-                    onClick={() => handleCallSelect(call)}
-                    className={`px-4 py-4 hover:bg-gray-50 cursor-pointer ${selectedCall?.id === call.id ? 'bg-indigo-50' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-indigo-600 truncate">{call.leadName}</p>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        {call.status === 'Completed' ? (
-                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircleIcon className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
+
+              {error && (
+                <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-400">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <XCircleIcon className="h-5 w-5 text-red-400" />
                     </div>
-                    <div className="mt-2 flex justify-between">
-                      <div className="flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          <ClockIcon className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                          {new Date(call.time).toLocaleString()}
-                        </p>
-                      </div>
-                      <p className={`text-xs px-2 py-1 rounded-full ${
-                        call.outcome === 'Interested' ? 'bg-green-100 text-green-800' :
-                        call.outcome === 'Not Interested' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {call.outcome}
-                      </p>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700">{error}</p>
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </div>
+              )}
+
+              {loading ? (
+                <div className="flex justify-center items-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                </div>
+              ) : callLogs.length === 0 ? (
+                <div className="text-center py-12">
+                  <PhoneIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No call logs found</h3>
+                  <p className="mt-1 text-sm text-gray-500">Initiating calls will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {callLogs.map((log) => (
+                    <div key={log._id || log.callId} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{log.customerName || 'Unknown Caller'}</h3>
+                          {log.customerPhone && (
+                            <p className="text-sm text-gray-500 flex items-center mt-1">
+                              <PhoneIcon className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
+                              {log.customerPhone}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">
+                            {log.timestamp && !isNaN(new Date(log.timestamp)) 
+                              ? format(new Date(log.timestamp), 'MMM d, yyyy h:mm a')
+                              : 'Invalid Date'}
+                          </p>
+                        </div>
+                        <div>
+                          <StatusBadge status={log.status || 'Unknown'} />
+                        </div>
+                      </div>
+
+                      {(log.event || log.notes) && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          {log.event && (
+                            <p className="text-sm text-gray-700">
+                              <span className="font-medium">Event:</span> {log.event}
+                            </p>
+                          )}
+                          {log.notes && (
+                            <p className="mt-1 text-sm text-gray-600">{log.notes}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {log.duration > 0 && (
+                        <div className="mt-2 text-sm text-gray-500">
+                          <span className="font-medium">Duration:</span> {Math.floor(log.duration / 60)}m {log.duration % 60}s
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          
+
           {activeTab === 'whatsapp' && (
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
@@ -244,7 +309,7 @@ const AICenter = () => {
               </div>
               <ul className="divide-y divide-gray-200 max-h-[calc(100vh-250px)] overflow-y-auto">
                 {whatsappChats.map((chat) => (
-                  <li 
+                  <li
                     key={chat.id}
                     onClick={() => handleChatSelect(chat)}
                     className={`px-4 py-4 hover:bg-gray-50 cursor-pointer ${selectedChat?.id === chat.id ? 'bg-indigo-50' : ''}`}
@@ -271,7 +336,7 @@ const AICenter = () => {
               </ul>
             </div>
           )}
-          
+
           {activeTab === 'followups' && (
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
               <div className="px-4 py-5 sm:px-6 border-b border-gray-200">

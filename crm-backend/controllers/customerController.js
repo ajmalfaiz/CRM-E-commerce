@@ -68,9 +68,46 @@ async function deleteCustomer(req, res) {
 }
 
 
+// Get call logs for all customers
+async function getCallLogs(req, res) {
+  try {
+    const token = req.user?.id;
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Find all customers with call logs
+    const customers = await Customer.find({
+      user: token,
+      'callLogs.0': { $exists: true } // Only customers with call logs
+    })
+    .select('name email phone callLogs')
+    .sort({ 'callLogs.timestamp': -1 });
+
+    // Flatten call logs with customer info
+    const callLogs = customers.flatMap(customer => 
+      customer.callLogs.map(log => ({
+        ...log.toObject(),
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        customerEmail: customer.email
+      }))
+    );
+
+    // Sort by timestamp descending (newest first)
+    callLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.json(callLogs);
+  } catch (err) {
+    console.error('Error fetching call logs:', err);
+    res.status(500).json({ error: 'Failed to fetch call logs' });
+  }
+}
+
 module.exports = {
   getAllCustomers,
   createCustomer,
   updateCustomer,
-  deleteCustomer
+  deleteCustomer,
+  getCallLogs
 };
