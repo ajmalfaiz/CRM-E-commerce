@@ -134,7 +134,18 @@ const callLead = async (req, res) => {
       custom_sip_headers: {
         'X-Lead-ID': lead._id.toString()
       },
-      metadata: callLogEntry.metadata
+      metadata: callLogEntry.metadata,
+      // Enable call recording
+      record: {
+        format: 'mp3',
+        storage: 'retell',  // Store recordings on Retell's servers
+        transcription: true, // Enable transcription
+        whisper: {
+          model: 'whisper-1',
+          language: 'en',
+          prompt: `This is a sales call with ${lead.name || 'a customer'}.`
+        }
+      }
     };
 
     log('Initiating call with Retell API', {

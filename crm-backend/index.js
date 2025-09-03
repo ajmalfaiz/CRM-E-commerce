@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
+const dotenv = require('dotenv');
 
 // Configure CORS
 const corsOptions = {
@@ -13,7 +14,7 @@ const corsOptions = {
 };
 
 // Connect to MongoDB
-mongoose.connect('mongodb+srv://manikant2123:n4971K1h9FeDSwQ2@cluster0.bppu43r.mongodb.net/commers', {
+mongoose.connect(process.env.URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
