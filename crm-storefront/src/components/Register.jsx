@@ -1,20 +1,26 @@
-import axios from 'axios';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiService } from '../services/api.js';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    
     try {
-      await axios.post('/api/auth/register', { email, password });
-      navigate('/');
+      await apiService.auth.register({ email, password });
+      navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
+      setError(err.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -46,9 +52,10 @@ const Register = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md"
+            disabled={isLoading}
+            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Register
+            {isLoading ? 'Registering...' : 'Register'}
           </button>
         </form>
         <p className="mt-4 text-sm">

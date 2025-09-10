@@ -1,7 +1,7 @@
-import axios from 'axios';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { apiService } from '../services/api.js';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -80,8 +80,8 @@ const CheckoutPage = () => {
         total: total
       };
 
-      // Send order to backend using axios (token automatically added by interceptor)
-      const response = await axios.post('/api/orders', orderData);
+      // Send order to backend using centralized API service
+      const response = await apiService.orders.create(orderData);
 
       const order = response.data;
       

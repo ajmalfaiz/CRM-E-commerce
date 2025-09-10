@@ -1,6 +1,6 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiService } from '../services/api.js';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
@@ -18,7 +18,7 @@ const OrderHistory = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get('/api/orders');
+      const response = await apiService.orders.getAll();
       const ordersData = response.data;
       setOrders(ordersData);
     } catch (err) {

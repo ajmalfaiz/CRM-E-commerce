@@ -1,7 +1,7 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { apiService } from '../services/api.js';
 import ProductCard from './ProductCard';
 import Cart from './Cart';
 import CartPage from '../pages/CartPage';
@@ -32,11 +32,9 @@ const NewArrivals = () => {
    const fetchProducts = async () => {
      try {
        setLoading(true);
-       const token = localStorage.getItem('token');
-       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-       headers['x-storefront'] = 'true'; // Indicate this is a storefront request
-      
-       const response = await axios.get('/api/products', { headers });
+       const response = await apiService.products.getAll({ 
+         'x-storefront': 'true' 
+       });
        console.log('Fetched products:', response.data);
       
        // Sort by createdAt in descending order and take first 10

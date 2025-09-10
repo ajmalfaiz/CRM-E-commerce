@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { apiService } from '../services/api.js';
 import ProductCard from '../components/ProductCard';
-import axios from 'axios';
 
 const SearchResults = () => {
   const [searchResults, setSearchResults] = useState([]);
@@ -27,7 +27,9 @@ const SearchResults = () => {
         headers['x-storefront'] = 'true';
         
         // First, fetch all products
-        const response = await axios.get('/api/products', { headers });
+        const response = await apiService.products.getAll({ 
+          'x-storefront': 'true' 
+        });
         
         // Then filter them based on the search query
         const results = response.data.filter(

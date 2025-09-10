@@ -1,8 +1,8 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { apiService } from '../services/api.js';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -20,12 +20,7 @@ const ProductDetails = () => {
         setLoading(true);
         setError(null);
         
-        // Use the same authentication method as the existing product list
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        headers['x-storefront'] = 'true'; // Indicate this is a storefront request
-        
-        const response = await axios.get(`/api/products/${id}`, { headers });
+        const response = await apiService.products.getById(id);
         console.log('Fetched product details:', response.data);
         setProduct(response.data);
       } catch (err) {

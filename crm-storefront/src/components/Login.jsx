@@ -1,23 +1,27 @@
-import axios from 'axios';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiService } from '../services/api.js';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
+      const res = await apiService.auth.login({ email, password });
       localStorage.setItem('token', res.data.token);
-      // Set default Authorization header for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -49,9 +53,10 @@ const Login = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md"
+            disabled={isLoading}
+            className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         <p className="mt-4 text-sm">

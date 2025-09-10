@@ -1,7 +1,7 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { apiService } from '../services/api.js';
 import ProductCard from './ProductCard';
 
 const HomePage = () => {
@@ -28,12 +28,9 @@ const HomePage = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // Use the same endpoint as crm-frontend but with authentication
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        headers['x-storefront'] = 'true'; // Indicate this is a storefront request
-        
-        const response = await axios.get('/api/products', { headers });
+        const response = await apiService.products.getAll({ 
+          'x-storefront': 'true' // Indicate this is a storefront request
+        });
         console.log('Fetched products:', response.data);
         console.log('Products count:', response.data.length);
         console.log('Sample product:', response.data[0]);

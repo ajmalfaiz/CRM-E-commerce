@@ -1,8 +1,8 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useProfile } from '../context/ProfileContext';
+import { apiService } from '../services/api.js';
 import Wishlist from './Wishlist';
 
 const Header = () => {
@@ -31,11 +31,9 @@ const Header = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        headers['x-storefront'] = 'true';
-        
-        const response = await axios.get('/api/products', { headers });
+        const response = await apiService.products.getAll({ 
+          'x-storefront': 'true' 
+        });
         setAllProducts(response.data);
       } catch (error) {
         console.error('Error fetching products for search:', error);
