@@ -4,7 +4,7 @@ import {
     PencilIcon,
     TrashIcon
 } from '@heroicons/react/24/outline';
-import axios from 'axios';
+import api from '../utils/api';
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import AutoInvoiceSettings from './AutoInvoiceSettings';
@@ -13,7 +13,6 @@ import PaymentGatewaySetup from './PaymentGatewaySetup';
 import ProductForm from './ProductForm';
 
 // Product List Component
-const API_BASE_URL = 'http://localhost:3000';
 const ProductList = ({ products, onEdit, onDelete, onView, onReset, categories = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -344,7 +343,7 @@ const Ecommerce = () => {
 
   useEffect(() => {
     console.log('Fetching products...');
-    axios.get('/api/products')
+    api.get('/products')
       .then(res => {
         console.log('Products fetched successfully:', res.data);
         setProducts(res.data);
@@ -362,7 +361,7 @@ const Ecommerce = () => {
 
   const handleSaveProduct = (product, isMultipart) => {
     if (editingProduct) {
-      axios.put(`/api/products/${editingProduct._id}`, product)
+      api.put(`/products/${editingProduct._id}`, product)
         .then(res => {
           setProducts(products.map(p => p._id === editingProduct._id ? res.data : p));
           setEditingProduct(null);
@@ -372,7 +371,7 @@ const Ecommerce = () => {
         .catch(err => console.error(err));
     } else {
       if (isMultipart) {
-        axios.post('/api/products', product, {
+        api.post('/products', product, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
           .then(res => {
@@ -383,7 +382,7 @@ const Ecommerce = () => {
           })
           .catch(err => console.error(err));
       } else {
-        axios.post('/api/products', product)
+        api.post('/products', product)
           .then(res => {
             setProducts([...products, res.data]);
             setEditingProduct(null);
@@ -397,7 +396,7 @@ const Ecommerce = () => {
 
   const handleDeleteProduct = (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      axios.delete(`/api/products/${id}`)
+      api.delete(`/products/${id}`)
         .then(() => {
           setProducts(products.filter(p => p._id !== id));
         })

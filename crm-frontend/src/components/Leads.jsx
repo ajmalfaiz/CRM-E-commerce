@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../utils/api';
 import {
     AdjustmentsHorizontalIcon,
     ArrowDownTrayIcon,
@@ -87,11 +87,7 @@ const Leads = () => {
     const fetchLeads = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('/api/customers', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/customers');
         console.log('Fetched leads:', response.data);
         setLeads(response.data);
       } catch (error) {
@@ -197,7 +193,7 @@ const Leads = () => {
         )
       );
 
-      const url = `http://localhost:3000/api/customers/${encodeURIComponent(stringLeadId)}/call`;
+      const url = `/customers/${encodeURIComponent(stringLeadId)}/call`;
       const requestData = { 
         phoneNumber: cleanPhoneNumber,
         leadId: stringLeadId,
@@ -216,11 +212,7 @@ const Leads = () => {
       
       console.log('Sending call request to:', url, 'with data:', requestData);
       
-      const response = await axios.post(url, requestData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+      const response = await api.post(url, requestData, {
         validateStatus: (status) => status < 500 // Don't throw for 4xx errors
       });
       
@@ -238,9 +230,7 @@ const Leads = () => {
         
         // Try to refresh the leads, but don't let it fail the whole operation
         try {
-          const updatedLeads = await axios.get('http://localhost:3000/api/customers', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+          const updatedLeads = await api.get('/customers');
           setLeads(updatedLeads.data);
         } catch (refreshError) {
           console.warn('Failed to refresh leads (non-critical):', refreshError);
@@ -272,7 +262,7 @@ const Leads = () => {
         ));
 
         // Call API to update the lead status
-        await axios.put(`/api/customers/${dragItem._id}`, { status });
+        await api.put(`/customers/${dragItem._id}`, { status });
       } catch (error) {
         console.error('Error updating lead status:', error);
         // Revert local state on error
@@ -287,10 +277,10 @@ const Leads = () => {
   const handleAddLead = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/api/customers', newLead);
+      const response = await api.post('/customers', newLead);
       console.log('Lead created:', response.data);
       // Fetch the updated list of leads from the server
-      const updatedLeads = await axios.get('/api/customers');
+      const updatedLeads = await api.get('/customers');
       setLeads(updatedLeads.data);
       setShowAddModal(false);
       setNewLead({ name: '', email: '', phone: '', notes: '' });
@@ -629,16 +619,10 @@ const Leads = () => {
                 }
                 
                 console.log('Sending request to generate AI leads...');
-                const response = await axios.post('/api/customers/ai-generate', 
+                const response = await api.post('/customers/ai-generate', 
                   {
                     location: aiForm.location,
                     businessType: aiForm.businessType
-                  },
-                  {
-                    headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json'
-                    }
                   }
                 );
                 
@@ -647,11 +631,7 @@ const Leads = () => {
                 setAiForm({ location: '', businessType: '' });
                 
                 // Refresh the leads list
-                const updatedLeads = await axios.get('/api/customers', {
-                  headers: {
-                    'Authorization': `Bearer ${token}`
-                  }
-                });
+                const updatedLeads = await api.get('/customers');
                 
                 setLeads(updatedLeads.data);
                 alert(`Successfully generated ${response.data.length} leads!`);

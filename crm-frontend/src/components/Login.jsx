@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import api from '../utils/api';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -11,10 +11,8 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
-      // Set default Authorization header for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');

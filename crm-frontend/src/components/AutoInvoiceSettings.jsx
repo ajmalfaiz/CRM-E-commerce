@@ -1,5 +1,5 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import api from '../utils/api';
 
 const AutoInvoiceSettings = () => {
   const [prefix, setPrefix] = useState('');
@@ -9,9 +9,7 @@ const AutoInvoiceSettings = () => {
 
   useEffect(() => {
     // Fetch saved settings from backend
-    axios.get('/api/auto-invoice', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    })
+    api.get('/auto-invoice')
       .then(res => {
         if (res.data.prefix) setPrefix(res.data.prefix);
         if (res.data.footer) setFooter(res.data.footer);
@@ -22,9 +20,7 @@ const AutoInvoiceSettings = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    await axios.post('/api/auto-invoice', { prefix, footer, enabled }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
+    await api.post('/auto-invoice', { prefix, footer, enabled });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };

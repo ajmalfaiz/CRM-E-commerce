@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import {
   PhoneIcon,
   ChatBubbleLeftRightIcon,
@@ -101,12 +101,7 @@ const AICenter = () => {
         throw new Error('Please log in to view call logs');
       }
 
-      const response = await axios.get('http://localhost:3000/api/customers/calls/logs', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/customers/calls/logs');
 
       setCallLogs(response.data || []);
       setError(null);

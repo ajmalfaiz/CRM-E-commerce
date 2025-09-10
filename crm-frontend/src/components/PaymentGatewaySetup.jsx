@@ -1,5 +1,5 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import api from '../utils/api';
 
 const AVAILABLE_GATEWAYS = [
   { name: 'Stripe', desc: 'Connect your Stripe account to process payments securely.' },
@@ -17,9 +17,7 @@ const PaymentGatewaySetup = () => {
 
   useEffect(() => {
     // Fetch saved gateway settings (simulate real-time fetch)
-    axios.get('/api/payment-gateway', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    })
+    api.get('/payment-gateway')
       .then(res => {
         if (res.data.gatewayName) setGatewayName(res.data.gatewayName);
         if (res.data.apiKey) setApiKey(res.data.apiKey);
@@ -30,17 +28,13 @@ const PaymentGatewaySetup = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    await axios.post('/api/payment-gateway', { gatewayName, apiKey }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
+    await api.post('/payment-gateway', { gatewayName, apiKey });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleConnect = async (name) => {
-    await axios.post('/api/payment-gateway/connect', { gateway: name }, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
+    await api.post('/payment-gateway/connect', { gateway: name });
     setConnected(prev => ({ ...prev, [name]: true }));
   };
 
